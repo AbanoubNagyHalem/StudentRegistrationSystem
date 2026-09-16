@@ -1,0 +1,110 @@
+@page "/admin/students"
+@attribute [Authorize(Roles = "Admin")]
+@inject AdminService AdminApi
+@inject ISnackbar Snackbar
+
+<PageTitle>Students</PageTitle>
+
+<div class="d-flex align-center mb-4">
+    <MudText Typo="Typo.h4">Students</MudText>
+    <MudSpacer />
+    <MudTextField T="string" @bind-Value="_filter"
+                  Placeholder="Search by name or reg no..."
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Immediate="true" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  Style="max-width:320px;" />
+</div>
+
+@if (_loading)
+{
+    <div style="display:flex;justify-content:center;padding:4rem;">
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    </div>
+}
+else
+{
+    <MudPaper Elevation="2" Class="pa-0" Style="border-radius:12px;overflow:hidden;">
+        <MudTable Items="Filtered" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>Reg. No.</MudTh>
+                <MudTh>Full Name</MudTh>
+                <MudTh>Level</MudTh>
+                <MudTh>College</MudTh>
+                <MudTh>Department</MudTh>
+                <MudTh>Status</MudTh>
+                <MudTh Class="text-right">GPA</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Reg. No.">
+                    <span style="font-weight:600;">@context.RegistrationNumber</span>
+                </MudTd>
+                <MudTd DataLabel="Full Name">@context.FullName</MudTd>
+                <MudTd DataLabel="Level">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                             Color="@LevelColor(context.Level)">
+                        @context.Level
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="College">@context.CollegeName</MudTd>
+                <MudTd DataLabel="Department">@context.DepartmentName</MudTd>
+                <MudTd DataLabel="Status">
+                    <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                             Color="@StatusColor(context.Status)">
+                        @context.Status
+                    </MudChip>
+                </MudTd>
+                <MudTd DataLabel="GPA" Class="text-right">
+                    @(context.GPA?.ToString("0.00") ?? "—")
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+@code {
+    private List<AdminStudentDto> _students = new();
+    private bool _loading = true;
+    private string _filter = string.Empty;
+
+    private List<AdminStudentDto> Filtered =>
+        string.IsNullOrWhiteSpace(_filter)
+            ? _students
+            : _students.Where(s =>
+                s.RegistrationNumber.Contains(_filter, StringComparison.OrdinalIgnoreCase) ||
+                s.FullName.Contains(_filter, StringComparison.OrdinalIgnoreCase) ||
+                s.DepartmentName.Contains(_filter, StringComparison.OrdinalIgnoreCase) ||
+                s.CollegeName.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _students = await AdminApi.GetStudentsAsync() ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+
+    private static Color StatusColor(string status) => status switch
+    {
+        "Active" => Color.Success,
+        "Graduated" => Color.Info,
+        "Suspended" => Color.Warning,
+        "Dismissed" => Color.Error,
+        _ => Color.Default
+    };
+
+    private static Color LevelColor(string level) => level switch
+    {
+        "Master" => Color.Primary,
+        "Bachelor" => Color.Secondary,
+        _ => Color.Default
+    };
+}

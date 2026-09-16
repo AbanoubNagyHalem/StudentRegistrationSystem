@@ -1,0 +1,120 @@
+@page "/schedule/print"
+@layout EmptyLayout
+@attribute [Authorize(Roles = "Student")]
+@inject ScheduleService ScheduleApi
+@inject IJSRuntime JS
+
+<PageTitle>Print Schedule</PageTitle>
+
+@if (_loading)
+{
+  <div style="padding:4rem;text-align:center;">
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+  </div>
+}
+else if (_schedule is null)
+{
+  <MudAlert Severity="Severity.Error">Failed to load schedule.</MudAlert>
+}
+else
+{
+  <div class="print-container">
+    <div class="no-print" style="text-align:right;margin-bottom:12px;">
+      <MudButton Variant="Variant.Filled" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print"
+                 OnClick="PrintAsync">
+        Print
+      </MudButton>
+      <MudButton Variant="Variant.Outlined" Color="Color.Default" Class="ml-2" OnClick="Close">
+        Close
+      </MudButton>
+    </div>
+
+    <div class="header">
+      <h1>Student Registration Portal</h1>
+      <h2>Semester Schedule</h2>
+    </div>
+
+    <table class="info-table">
+      <tr>
+        <td><strong>Student:</strong> @_schedule.StudentName</td>
+        <td><strong>Registration No.:</strong> @_schedule.RegistrationNumber</td>
+      </tr>
+      <tr>
+        <td><strong>Department:</strong> @_schedule.DepartmentName</td>
+        <td><strong>Semester:</strong> @_schedule.SemesterName</td>
+      </tr>
+      <tr>
+        <td colspan="2"><strong>Total Credit Hours:</strong> @_schedule.TotalCreditHours</td>
+      </tr>
+    </table>
+
+    @if (_schedule.Items.Count == 0)
+    {
+      <p style="text-align:center;padding:40px;color:#666;">
+        No courses registered for this semester.
+      </p>
+    }
+    else
+    {
+      <table class="courses-table">
+        <thead>
+          <tr>
+            <th>Course</th>
+            <th>Section</th>
+            <th>Day</th>
+            <th>Time</th>
+            <th>Room</th>
+            <th>Instructor</th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var item in _schedule.Items)
+          {
+            <tr>
+              <td>
+                <strong>@item.CourseCode</strong><br />
+                <span class="muted">@item.CourseName</span>
+              </td>
+              <td>@item.SectionNumber</td>
+              <td>@item.DayOfWeek</td>
+              <td>@item.StartTime – @item.EndTime</td>
+              <td>@(item.Room ?? "—")</td>
+              <td>@item.InstructorName</td>
+            </tr>
+          }
+        </tbody>
+      </table>
+    }
+
+    <div class="footer">
+      <p>Generated on @DateTime.Now.ToString("yyyy-MM-dd HH:mm")</p>
+    </div>
+  </div>
+}
+
+@code {
+  private ScheduleDto? _schedule;
+  private bool _loading = true;
+
+  protected override async Task OnInitializedAsync()
+  {
+    try
+    {
+      _schedule = await ScheduleApi.GetCurrentScheduleAsync();
+    }
+    catch { }
+    finally
+    {
+      _loading = false;
+    }
+  }
+
+  private async Task PrintAsync()
+  {
+    await JS.InvokeVoidAsync("window.print");
+  }
+  private void Close()
+  {
+    JS.InvokeVoidAsync("window.close");
+  }
+}

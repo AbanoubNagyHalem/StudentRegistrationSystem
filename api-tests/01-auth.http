@@ -1,0 +1,72 @@
+### ========================================
+### STUDENT LOGIN - Success (Ahmed - Active)
+### ========================================
+# @name studentLogin
+POST http://localhost:5039/api/auth/login
+Content-Type: application/json
+
+{
+    "registrationNumber": "20240001",
+    "pin": "1234"
+}
+
+
+### ========================================
+### STUDENT LOGIN - Wrong PIN (expect 401)
+### ========================================
+POST http://localhost:5039/api/auth/login
+Content-Type: application/json
+
+{
+    "registrationNumber": "20240001",
+    "pin": "wrong-pin"
+}
+
+
+### ========================================
+### STUDENT LOGIN - Unknown Reg Number (expect 401)
+### ========================================
+POST http://localhost:5039/api/auth/login
+Content-Type: application/json
+
+{
+    "registrationNumber": "99999999",
+    "pin": "1234"
+}
+
+
+### ========================================
+### STUDENT LOGIN - Empty Fields (expect 400)
+### ========================================
+POST http://localhost:5039/api/auth/login
+Content-Type: application/json
+
+{
+    "registrationNumber": "",
+    "pin": ""
+}
+
+
+### ========================================
+### ADMIN LOGIN - Success
+### ========================================
+# @name adminLogin
+POST http://localhost:5039/api/auth/admin-login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "Admin@123"
+}
+
+
+### ========================================
+### ADMIN LOGIN - Wrong Password (expect 401)
+### ========================================
+POST http://localhost:5039/api/auth/admin-login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "wrong-password"
+}

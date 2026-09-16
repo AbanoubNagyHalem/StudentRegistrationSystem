@@ -1,0 +1,119 @@
+### ========================================
+### 0. Admin Login
+### ========================================
+# @name adminLogin
+POST http://localhost:5039/api/auth/admin-login
+Content-Type: application/json
+
+{
+    "username": "admin",
+    "password": "Admin@123"
+}
+
+
+### ========================================
+### 1. List Students
+### ========================================
+GET http://localhost:5039/api/admin/students
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+
+### ========================================
+### 2. List Registration Periods
+### ========================================
+GET http://localhost:5039/api/admin/registration-periods
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+
+### ========================================
+### 3. Close Registration Period (id=1)
+### ========================================
+PUT http://localhost:5039/api/admin/registration-periods/1/close
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+
+### ========================================
+### 4. Verify Student Cannot Register (CS Ahmet) — expect isEligible: false
+### ========================================
+# @name studentLogin
+POST http://localhost:5039/api/auth/login
+Content-Type: application/json
+
+{
+    "registrationNumber": "20240001",
+    "pin": "1234"
+}
+
+###
+GET http://localhost:5039/api/registration/eligibility
+Authorization: Bearer {{studentLogin.response.body.$.token}}
+
+
+### ========================================
+### 5. Open Registration Period Again (id=1)
+### ========================================
+PUT http://localhost:5039/api/admin/registration-periods/1/open
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+
+### ========================================
+### 6. List Semesters
+### ========================================
+GET http://localhost:5039/api/admin/semesters
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+
+### ========================================
+### 7. List Courses
+### ========================================
+GET http://localhost:5039/api/admin/courses
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+
+### ========================================
+### 8. List Sections (current semester id=1)
+### ========================================
+GET http://localhost:5039/api/admin/sections?semesterId=1
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+
+### ========================================
+### 9. Create New Course
+### ========================================
+POST http://localhost:5039/api/admin/courses
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+Content-Type: application/json
+
+{
+    "code": "TEST999",
+    "name": "Test Course",
+    "creditHours": 3,
+    "departmentId": 1
+}
+
+
+### ========================================
+### 10. List Departments
+### ========================================
+GET http://localhost:5039/api/admin/departments
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+
+### ========================================
+### 11. List Instructors
+### ========================================
+GET http://localhost:5039/api/admin/instructors
+Authorization: Bearer {{adminLogin.response.body.$.token}}
+
+
+### ========================================
+### 12. Try Admin Endpoint Without Token (expect 401)
+### ========================================
+GET http://localhost:5039/api/admin/students
+
+
+### ========================================
+### 13. Try Admin Endpoint With Student Token (expect 403)
+### ========================================
+GET http://localhost:5039/api/admin/students
+Authorization: Bearer {{studentLogin.response.body.$.token}}

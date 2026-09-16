@@ -1,0 +1,191 @@
+@page "/"
+@page "/login"
+@layout EmptyLayout
+@inject AuthService Auth
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Login — Student Registration</PageTitle>
+
+<div class="login-bg">
+    <MudPaper Elevation="6" Class="pa-8" Style="width:440px;border-radius:16px;">
+        <div class="text-center mb-4">
+            <MudIcon Icon="@Icons.Material.Filled.School" Color="Color.Primary" Style="font-size:56px;" />
+            <MudText Typo="Typo.h5" Class="mt-2" Style="font-weight:600;">
+                Student Registration
+            </MudText>
+            <MudText Typo="Typo.body2" Color="Color.Secondary">
+                @if (_semester is not null)
+                {
+                    <span>Current Semester: <strong>@_semester.Name</strong></span>
+                }
+                else
+                {
+                    <span>Sign in to continue</span>
+                }
+            </MudText>
+        </div>
+
+        <MudTabs Elevation="0" Rounded Color="Color.Primary" ApplyEffectsToContainer="true" Class="pt-4" Centered>
+            <MudTabPanel Text="Student">
+                <MudForm @ref="_studentForm" Model="_studentModel">
+                    <MudTextField T="string" @bind-Value="_studentModel.RegistrationNumber" Label="Registration Number"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Badge" Required="true"
+                                  RequiredError="Registration number is required." />
+
+                    <MudTextField T="string" @bind-Value="_studentModel.Pin" Label="PIN" Variant="Variant.Outlined"
+                                  Margin="Margin.Dense" InputType="InputType.Password" Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Lock" Class="mt-3" Required="true"
+                                  RequiredError="PIN is required." OnKeyDown="OnStudentKeyDown" />
+
+                    @if (!string.IsNullOrEmpty(_studentError))
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-3">
+                            @_studentError
+                        </MudAlert>
+                    }
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large"
+                               Class="mt-4" OnClick="StudentLoginAsync" Disabled="_loading">
+                        @if (_loading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit" />
+                        }
+                        else
+                        {
+                            <span>Login</span>
+                        }
+                    </MudButton>
+                </MudForm>
+            </MudTabPanel>
+
+            <MudTabPanel Text="Admin">
+                <MudForm @ref="_adminForm" Model="_adminModel">
+                    <MudTextField T="string" @bind-Value="_adminModel.Username" Label="Username"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" Adornment="Adornment.Start"
+                                  AdornmentIcon="@Icons.Material.Filled.Person" Required="true" />
+
+                    <MudTextField T="string" @bind-Value="_adminModel.Password" Label="Password"
+                                  Variant="Variant.Outlined" Margin="Margin.Dense" InputType="InputType.Password"
+                                  Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Lock" Class="mt-3"
+                                  Required="true" />
+
+                    @if (!string.IsNullOrEmpty(_adminError))
+                    {
+                        <MudAlert Severity="Severity.Error" Dense="true" Class="mt-3">
+                            @_adminError
+                        </MudAlert>
+                    }
+
+                    <MudButton Variant="Variant.Filled" Color="Color.Primary" FullWidth="true" Size="Size.Large"
+                               Class="mt-4" OnClick="AdminLoginAsync" Disabled="_loading">
+                        @if (_loading)
+                        {
+                            <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit" />
+                        }
+                        else
+                        {
+                            <span>Admin Login</span>
+                        }
+                    </MudButton>
+                </MudForm>
+            </MudTabPanel>
+        </MudTabs>
+
+        <MudDivider Class="my-4" />
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-center d-block">
+            Demo Student: <strong>20260001</strong> / PIN <strong>1234</strong>
+        </MudText>
+        <MudText Typo="Typo.caption" Color="Color.Secondary" Class="text-center d-block">
+            Demo Admin: <strong>admin</strong> / <strong>Admin@123</strong>
+        </MudText>
+    </MudPaper>
+</div>
+
+@code {
+    private MudForm? _studentForm;
+    private MudForm? _adminForm;
+
+    private StudentLoginModel _studentModel = new();
+    private AdminLoginModel _adminModel = new();
+
+    private string? _studentError;
+    private string? _adminError;
+    private CurrentSemesterDto? _semester;
+    private bool _loading;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { _semester = await FetchSemesterAsync(); }
+        catch { /* ignore */ }
+    }
+
+    private async Task<CurrentSemesterDto?> FetchSemesterAsync()
+    {
+        using var http = new HttpClient { BaseAddress = new Uri("http://localhost:5039") };
+        try
+        {
+            return await http.GetFromJsonAsync<CurrentSemesterDto>("/api/semesters/current");
+        }
+        catch { return null; }
+    }
+
+    private async Task StudentLoginAsync()
+    {
+        _studentError = null;
+        if (_studentForm is null) return;
+        await _studentForm.ValidateAsync();
+        if (!_studentForm.IsValid) return;
+
+        _loading = true;
+        try
+        {
+            var user = await Auth.StudentLoginAsync(
+                _studentModel.RegistrationNumber.Trim(),
+                _studentModel.Pin);
+
+            Snackbar.Add($"Welcome, {user.FullName}!", Severity.Success);
+            Nav.NavigateTo("/dashboard", replace: true);
+        }
+        catch (ApiException ex) { _studentError = ex.Message; }
+        catch (Exception ex) { _studentError = ex.Message; }
+        finally { _loading = false; }
+    }
+
+    private async Task AdminLoginAsync()
+    {
+        _adminError = null;
+        if (_adminForm is null) return;
+        await _adminForm.ValidateAsync();
+        if (!_adminForm.IsValid) return;
+
+        _loading = true;
+        try
+        {
+            var user = await Auth.AdminLoginAsync(_adminModel.Username, _adminModel.Password);
+            Snackbar.Add($"Welcome, {user.FullName}!", Severity.Success);
+            Nav.NavigateTo("/admin", replace: true);
+        }
+        catch (ApiException ex) { _adminError = ex.Message; }
+        catch (Exception ex) { _adminError = ex.Message; }
+        finally { _loading = false; }
+    }
+
+    private async Task OnStudentKeyDown(KeyboardEventArgs e)
+    {
+        if (e.Key == "Enter") await StudentLoginAsync();
+    }
+
+    public class StudentLoginModel
+    {
+        public string RegistrationNumber { get; set; } = "";
+        public string Pin { get; set; } = "";
+    }
+
+    public class AdminLoginModel
+    {
+        public string Username { get; set; } = "";
+        public string Password { get; set; } = "";
+    }
+}

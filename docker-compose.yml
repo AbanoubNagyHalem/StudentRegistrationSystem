@@ -1,0 +1,73 @@
+services:
+  # ============================================================
+  # SQL Server 2022
+  # ============================================================
+  sqlserver:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    container_name: student-reg-sqlserver
+    environment:
+      ACCEPT_EULA: "Y"
+      MSSQL_SA_PASSWORD: "YourStrong@Passw0rd123"
+      MSSQL_PID: "Developer"
+    ports:
+      - "1433:1433"
+    volumes:
+      - sql_data:/var/opt/mssql
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P 'YourStrong@Passw0rd123' -C -Q 'SELECT 1' || exit 1",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 15
+      start_period: 60s
+    networks:
+      - student-reg-net
+
+  # ============================================================
+  # API (.NET 10)
+  # ============================================================
+  api:
+    build:
+      context: ./src
+      dockerfile: StudentRegistration.Api/Dockerfile
+    container_name: student-reg-api
+    environment:
+      ASPNETCORE_ENVIRONMENT: "Development"
+      ASPNETCORE_URLS: "http://+:8080"
+      ConnectionStrings__DefaultConnection: "Server=sqlserver,1433;Database=StudentRegistrationDb;User Id=sa;Password=YourStrong@Passw0rd123;TrustServerCertificate=True;MultipleActiveResultSets=true"
+      Jwt__Issuer: "StudentRegistrationSystem"
+      Jwt__Audience: "StudentRegistrationClient"
+      Jwt__Key: "DEV_ONLY_SUPER_SECRET_KEY_CHANGE_IN_PRODUCTION_AT_LEAST_32_CHARS_LONG_1234567890"
+      Jwt__ExpiryHours: "8"
+    ports:
+      - "5039:8080"
+    depends_on:
+      sqlserver:
+        condition: service_healthy
+    networks:
+      - student-reg-net
+
+  # ============================================================
+  # Client (Blazor WASM + nginx)
+  # ============================================================
+  client:
+    build:
+      context: ./src
+      dockerfile: StudentRegistration.Client/Dockerfile
+    container_name: student-reg-client
+    ports:
+      - "5174:80"
+    depends_on:
+      - api
+    networks:
+      - student-reg-net
+
+volumes:
+  sql_data:
+
+networks:
+  student-reg-net:
+    driver: bridge

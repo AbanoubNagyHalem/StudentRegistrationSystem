@@ -1,0 +1,38 @@
+@inherits LayoutComponentBase
+
+<MudThemeProvider Theme="@_theme" />
+<MudDialogProvider />
+<MudSnackbarProvider />
+
+@Body
+
+<style>
+  .login-bg {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, #594AE2 0%, #8B7FE8 60%, #B7B0F0 100%);
+  }
+</style>
+
+@code {
+  private MudTheme _theme = new()
+  {
+    PaletteLight = new PaletteLight
+    {
+      Primary = "#594AE2",
+      Secondary = "#8B7FE8",
+      AppbarBackground = "#594AE2",
+      Background = "#f5f5f7",
+      Surface = "#ffffff"
+    },
+    Typography = new Typography
+    {
+      Default = new DefaultTypography
+      {
+        FontFamily = new[] { "Inter", "Segoe UI", "Tahoma", "sans-serif" }
+      }
+    }
+  };
+}

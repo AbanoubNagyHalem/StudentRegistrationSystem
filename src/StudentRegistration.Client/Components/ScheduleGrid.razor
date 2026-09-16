@@ -1,0 +1,252 @@
+@using StudentRegistration.Client.Models
+
+<MudPaper Elevation="2" Class="pa-4" Style="border-radius:12px;overflow-x:auto;">
+  <div class="d-flex align-center mb-3">
+    <MudText Typo="Typo.h6">Weekly Schedule Preview</MudText>
+    <MudSpacer />
+    <MudChip T="string" Size="Size.Small" Style="background:#e0e7ff;color:#3730a3;">
+      @Items.Count session(s)
+    </MudChip>
+  </div>
+
+  @if (Items.Count == 0)
+  {
+    <MudText Color="Color.Secondary" Class="text-center pa-4">
+      Select courses to see the preview schedule.
+    </MudText>
+  }
+  else
+  {
+    <div class="schedule-grid">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:110px;">Day / Period</th>
+            @for (int p = 1; p <= 6; p++)
+            {
+              <th>Period @p<br /><span class="period-time">@GetPeriodLabel(p)</span></th>
+            }
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var day in Days)
+          {
+            <tr>
+              <td class="day-cell">@day</td>
+              @for (int p = 1; p <= 6; p++)
+              {
+                var cellItems = GetItemsForCell(day, p).ToList();
+                var hasConflict = cellItems.Count > 1;
+                <td class="slot-cell @(hasConflict ? "conflict" : (cellItems.Count > 0 ? "filled" : ""))">
+                  @if (cellItems.Count == 0)
+                  {
+                    <span class="empty">&mdash;</span>
+                  }
+                  else
+                  {
+                    @if (hasConflict)
+                    {
+                      <div class="conflict-badge">
+                        <MudIcon Icon="@Icons.Material.Filled.Warning" Size="Size.Small" />
+                        Conflict
+                      </div>
+                    }
+                    @foreach (var item in cellItems)
+                    {
+                      <div class="slot-chip @(hasConflict ? "chip-conflict" : "")"
+                           style="@(hasConflict ? "" : GetChipStyle(item.CourseCode))">
+                        <div class="slot-code">
+                          @item.CourseCode
+                          @if (item.IsLab)
+                          {
+                            <span class="lab-tag">LAB</span>
+                          }
+                        </div>
+                        <div class="slot-time">@item.StartTime – @item.EndTime</div>
+                        <div class="slot-room">@(item.Room ?? "")</div>
+                      </div>
+                    }
+                  }
+                </td>
+              }
+            </tr>
+          }
+        </tbody>
+      </table>
+    </div>
+  }
+</MudPaper>
+
+<style>
+  .schedule-grid table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 780px;
+  }
+
+  .schedule-grid th {
+    background: #594AE2;
+    color: white;
+    padding: 8px 6px;
+    font-size: 12px;
+    text-align: center;
+    border: 1px solid #ddd;
+  }
+
+  .period-time {
+    font-size: 10px;
+    font-weight: 400;
+    opacity: 0.85;
+  }
+
+  .schedule-grid td {
+    border: 1px solid #e0e0e0;
+    padding: 6px;
+    vertical-align: top;
+    height: 78px;
+    font-size: 12px;
+  }
+
+  .day-cell {
+    background: #f5f5f7;
+    font-weight: 600;
+    text-align: center;
+    font-size: 13px !important;
+    vertical-align: middle !important;
+    color: #594AE2;
+  }
+
+  .empty {
+    color: #ccc;
+    font-size: 14px;
+  }
+
+  .slot-cell.conflict {
+    background: #fef2f2;
+    border: 2px dashed #EF4444 !important;
+  }
+
+  .slot-chip {
+    padding: 4px 6px;
+    border-radius: 6px;
+    margin-bottom: 4px;
+    color: white;
+    font-size: 11px;
+  }
+
+  .chip-conflict {
+    background: #EF4444;
+    animation: pulse 1.5s ease-in-out infinite;
+  }
+
+  @@keyframes pulse {
+
+    0%,
+    100% {
+      opacity: 1;
+    }
+
+    50% {
+      opacity: 0.75;
+    }
+  }
+
+  .slot-code {
+    font-weight: 700;
+  }
+
+  .slot-time {
+    opacity: 0.95;
+  }
+
+  .slot-room {
+    opacity: 0.85;
+    font-style: italic;
+  }
+
+  .lab-tag {
+    display: inline-block;
+    background: rgba(255, 255, 255, 0.35);
+    border-radius: 3px;
+    padding: 0 4px;
+    font-size: 9px;
+    margin-left: 3px;
+    vertical-align: middle;
+  }
+
+  .conflict-badge {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    background: #fee2e2;
+    color: #991b1b;
+    border-radius: 5px;
+    padding: 2px 5px;
+    font-size: 10px;
+    font-weight: 600;
+    margin-bottom: 4px;
+  }
+</style>
+
+@code {
+  [Parameter, EditorRequired] public List<PreviewItem> Items { get; set; } = new();
+
+  private static readonly string[] Days =
+      { "Saturday", "Sunday", "Monday", "Tuesday", "Wednesday", "Thursday" };
+
+  private IEnumerable<PreviewItem> GetItemsForCell(string day, int period)
+  {
+    var start = GetPeriodStart(period);
+    var end = GetPeriodEnd(period);
+
+    return Items.Where(i =>
+        i.DayOfWeek.Equals(day, StringComparison.OrdinalIgnoreCase) &&
+        TimeOnly.TryParse(i.StartTime, out var st) &&
+        TimeOnly.TryParse(i.EndTime, out var et) &&
+        st < end && start < et);
+  }
+
+  private static string GetPeriodLabel(int period) => period switch
+  {
+    1 => "08–10",
+    2 => "10–12",
+    3 => "12–14",
+    4 => "14–16",
+    5 => "16–18",
+    6 => "18–20",
+    _ => ""
+  };
+
+  private static TimeOnly GetPeriodStart(int period) => period switch
+  {
+    1 => new TimeOnly(8, 0),
+    2 => new TimeOnly(10, 0),
+    3 => new TimeOnly(12, 0),
+    4 => new TimeOnly(14, 0),
+    5 => new TimeOnly(16, 0),
+    6 => new TimeOnly(18, 0),
+    _ => new TimeOnly(8, 0)
+  };
+
+  private static TimeOnly GetPeriodEnd(int period) => period switch
+  {
+    1 => new TimeOnly(10, 0),
+    2 => new TimeOnly(12, 0),
+    3 => new TimeOnly(14, 0),
+    4 => new TimeOnly(16, 0),
+    5 => new TimeOnly(18, 0),
+    6 => new TimeOnly(20, 0),
+    _ => new TimeOnly(10, 0)
+  };
+
+  private static string GetChipStyle(string courseCode)
+  {
+    var colors = new[]
+    {
+            "#594AE2", "#F59E0B", "#10B981", "#3B82F6", "#8B5CF6",
+            "#0EA5E9", "#EC4899", "#14B8A6", "#F97316", "#6366F1"
+        };
+    var idx = Math.Abs(courseCode.GetHashCode()) % colors.Length;
+    return $"background:{colors[idx]};";
+  }
+}

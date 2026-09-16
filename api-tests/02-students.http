@@ -1,0 +1,37 @@
+### ========================================
+### 0. Login first to get token
+### ========================================
+# @name studentLogin
+POST http://localhost:5039/api/auth/login
+Content-Type: application/json
+
+{
+    "registrationNumber": "20240001",
+    "pin": "1234"
+}
+
+
+### ========================================
+### 1. Get My Profile
+### ========================================
+GET http://localhost:5039/api/students/me
+Authorization: Bearer {{studentLogin.response.body.$.token}}
+
+
+### ========================================
+### 2. Get My Dashboard
+### ========================================
+GET http://localhost:5039/api/students/me/dashboard
+Authorization: Bearer {{studentLogin.response.body.$.token}}
+
+
+### ========================================
+### 3. Get Current Semester (anonymous)
+### ========================================
+GET http://localhost:5039/api/semesters/current
+
+
+### ========================================
+### 4. Try Without Token (expect 401)
+### ========================================
+GET http://localhost:5039/api/students/me

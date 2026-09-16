@@ -1,0 +1,161 @@
+@page "/admin"
+@attribute [Authorize(Roles = "Admin")]
+@inject AdminService AdminApi
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>Admin Dashboard</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">Admin Dashboard</MudText>
+
+@if (_loading)
+{
+  <div style="display:flex;justify-content:center;padding:4rem;">
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+  </div>
+}
+else
+{
+  <MudGrid Spacing="3">
+    <MudItem xs="12" sm="6" md="3">
+      <MudPaper Elevation="2" Class="pa-4" Style="border-radius:12px;">
+        <div class="d-flex align-center">
+          <MudAvatar Color="Color.Primary" Size="Size.Large">
+            <MudIcon Icon="@Icons.Material.Filled.People" />
+          </MudAvatar>
+          <div class="ml-3">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Students</MudText>
+            <MudText Typo="Typo.h5" Style="font-weight:600;">@_studentsCount</MudText>
+          </div>
+        </div>
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+      <MudPaper Elevation="2" Class="pa-4" Style="border-radius:12px;">
+        <div class="d-flex align-center">
+          <MudAvatar Color="Color.Secondary" Size="Size.Large">
+            <MudIcon Icon="@Icons.Material.Filled.Book" />
+          </MudAvatar>
+          <div class="ml-3">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Courses</MudText>
+            <MudText Typo="Typo.h5" Style="font-weight:600;">@_coursesCount</MudText>
+          </div>
+        </div>
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+      <MudPaper Elevation="2" Class="pa-4" Style="border-radius:12px;">
+        <div class="d-flex align-center">
+          <MudAvatar Color="Color.Info" Size="Size.Large">
+            <MudIcon Icon="@Icons.Material.Filled.Class" />
+          </MudAvatar>
+          <div class="ml-3">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Sections</MudText>
+            <MudText Typo="Typo.h5" Style="font-weight:600;">@_sectionsCount</MudText>
+          </div>
+        </div>
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+      <MudPaper Elevation="2" Class="pa-4" Style="border-radius:12px;">
+        <div class="d-flex align-center">
+          <MudAvatar Color="@(_openPeriodsCount > 0 ? Color.Success : Color.Warning)" Size="Size.Large">
+            <MudIcon Icon="@Icons.Material.Filled.EventAvailable" />
+          </MudAvatar>
+          <div class="ml-3">
+            <MudText Typo="Typo.caption" Color="Color.Secondary">Open Periods</MudText>
+            <MudText Typo="Typo.h5" Style="font-weight:600;">@_openPeriodsCount</MudText>
+          </div>
+        </div>
+      </MudPaper>
+    </MudItem>
+  </MudGrid>
+
+  <MudText Typo="Typo.h5" Class="mt-6 mb-3">Quick Actions</MudText>
+
+  <MudGrid Spacing="3">
+    <MudItem xs="12" sm="6" md="3">
+      <MudPaper Elevation="2" Class="pa-4 action-card" Style="border-radius:12px;cursor:pointer;"
+                @onclick="@(() => Nav.NavigateTo("/admin/registration-periods"))">
+        <MudIcon Icon="@Icons.Material.Filled.Schedule" Color="Color.Primary" Style="font-size:36px;" />
+        <MudText Typo="Typo.h6" Class="mt-2">Registration Periods</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Open / Close registration</MudText>
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+      <MudPaper Elevation="2" Class="pa-4 action-card" Style="border-radius:12px;cursor:pointer;"
+                @onclick="@(() => Nav.NavigateTo("/admin/students"))">
+        <MudIcon Icon="@Icons.Material.Filled.People" Color="Color.Primary" Style="font-size:36px;" />
+        <MudText Typo="Typo.h6" Class="mt-2">Students</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Manage students</MudText>
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+      <MudPaper Elevation="2" Class="pa-4 action-card" Style="border-radius:12px;cursor:pointer;"
+                @onclick="@(() => Nav.NavigateTo("/admin/courses"))">
+        <MudIcon Icon="@Icons.Material.Filled.Book" Color="Color.Primary" Style="font-size:36px;" />
+        <MudText Typo="Typo.h6" Class="mt-2">Courses</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Manage courses</MudText>
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="3">
+      <MudPaper Elevation="2" Class="pa-4 action-card" Style="border-radius:12px;cursor:pointer;"
+                @onclick="@(() => Nav.NavigateTo("/admin/sections"))">
+        <MudIcon Icon="@Icons.Material.Filled.Class" Color="Color.Primary" Style="font-size:36px;" />
+        <MudText Typo="Typo.h6" Class="mt-2">Sections</MudText>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">Manage course sections</MudText>
+      </MudPaper>
+    </MudItem>
+  </MudGrid>
+
+  <style>
+    .action-card {
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+
+    .action-card:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 20px rgba(89, 74, 226, 0.18) !important;
+    }
+  </style>
+}
+
+@code {
+  private bool _loading = true;
+  private int _studentsCount;
+  private int _coursesCount;
+  private int _sectionsCount;
+  private int _openPeriodsCount;
+
+  protected override async Task OnInitializedAsync()
+  {
+    try
+    {
+      var studentsTask = AdminApi.GetStudentsAsync();
+      var coursesTask = AdminApi.GetCoursesAsync();
+      var sectionsTask = AdminApi.GetSectionsAsync();
+      var periodsTask = AdminApi.GetPeriodsAsync();
+
+      await Task.WhenAll(studentsTask, coursesTask, sectionsTask, periodsTask);
+
+      _studentsCount = studentsTask.Result?.Count ?? 0;
+      _coursesCount = coursesTask.Result?.Count ?? 0;
+      _sectionsCount = sectionsTask.Result?.Count ?? 0;
+      _openPeriodsCount = periodsTask.Result?.Count(p => p.IsOpen && p.IsCurrentlyActive) ?? 0;
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add($"Failed to load dashboard: {ex.Message}", Severity.Error);
+    }
+    finally
+    {
+      _loading = false;
+    }
+  }
+}

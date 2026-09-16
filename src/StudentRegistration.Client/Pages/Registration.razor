@@ -1,0 +1,504 @@
+@page "/registration"
+@attribute [Authorize(Roles = "Student")]
+@inject RegistrationService Reg
+@inject AuthService Auth
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Online Registration</PageTitle>
+
+@if (_loading)
+{
+  <div style="display:flex;justify-content:center;padding:4rem;">
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+  </div>
+}
+else if (_eligibility is not null && !_eligibility.IsEligible)
+{
+  <MudPaper Elevation="2" Class="pa-6 text-center" Style="border-radius:12px;">
+    <MudIcon Icon="@Icons.Material.Filled.Block" Style="font-size:64px;color:#EF4444;" />
+    <MudText Typo="Typo.h5" Class="mt-3">Registration Unavailable</MudText>
+    <MudText Typo="Typo.body1" Color="Color.Secondary" Class="mt-2">
+      @_eligibility.Reason
+    </MudText>
+    <div class="mt-4">
+      <MudButton Variant="Variant.Outlined" Color="Color.Primary" OnClick="@(() => Nav.NavigateTo("/dashboard"))">
+        Back to Dashboard
+      </MudButton>
+    </div>
+  </MudPaper>
+}
+else if (_courses.Count == 0)
+{
+  <MudAlert Severity="Severity.Info">
+    No courses available for your study plan in the current semester.
+  </MudAlert>
+}
+else
+{
+  @* ============================================================ *@
+  @* HEADER *@
+  @* ============================================================ *@
+  <div class="d-flex align-center mb-3">
+    <MudText Typo="Typo.h4">Online Registration</MudText>
+    <MudSpacer />
+    <MudChip T="string" Color="Color.Success" Variant="Variant.Filled" Size="Size.Small">
+      @_currentSemesterName
+    </MudChip>
+  </div>
+
+  @* ============================================================ *@
+  @* 1. AVAILABLE COURSES (table with scroll) *@
+  @* ============================================================ *@
+  <MudPaper Elevation="2" Class="pa-4 mb-3" Style="border-radius:12px;">
+    <div class="d-flex align-center mb-3">
+      <MudIcon Icon="@Icons.Material.Filled.MenuBook" Color="Color.Primary" Class="mr-2" />
+      <MudText Typo="Typo.h6">Available Courses</MudText>
+      <MudChip T="string" Size="Size.Small" Style="background:#e0e7ff;color:#3730a3;" Class="ml-2">
+        @FilteredCourses.Count
+      </MudChip>
+      <MudSpacer />
+      <MudTextField T="string" @bind-Value="_filter" Placeholder="Search..." Variant="Variant.Outlined"
+                    Margin="Margin.Dense" Immediate="true" Adornment="Adornment.Start" AdornmentIcon="@Icons.Material.Filled.Search"
+                    Style="max-width:220px;" />
+    </div>
+
+    <div class="courses-scroll">
+      @if (FilteredCourses.Count == 0)
+      {
+        <MudText Color="Color.Secondary" Class="text-center pa-4">
+          No courses match your search.
+        </MudText>
+      }
+      else
+      {
+        <MudSimpleTable Dense="true" Hover="true" Style="border-radius:8px;">
+          <thead>
+            <tr>
+              <th>Code</th>
+              <th>Course</th>
+              <th class="text-center">CH</th>
+              <th class="text-center">Seats</th>
+              <th class="text-center">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            @foreach (var c in FilteredCourses)
+            {
+              var isSelected = _selectedSections.ContainsKey(c.CourseId);
+              <tr>
+                <td style="font-weight:600;color:#594AE2;">@c.Code</td>
+                <td>
+                  @c.Name
+                  @if (c.IsAlreadyCompleted)
+                  {
+                    <MudChip T="string" Size="Size.Small" Color="Color.Info" Class="ml-2">
+                      Completed
+                    </MudChip>
+                  }
+                  @if (!c.IsPrerequisitesMet)
+                  {
+                    <div class="mt-1">
+                      <MudChip T="string" Size="Size.Small" Color="Color.Error" Icon="@Icons.Material.Filled.Warning">
+                        Missing: @c.PrerequisiteMissing
+                      </MudChip>
+                    </div>
+                  }
+                </td>
+                <td class="text-center">@c.CreditHours</td>
+                <td class="text-center">
+                  @if (c.Sections.Count == 0)
+                  {
+                    <span style="color:#aaa;">—</span>
+                  }
+                  else
+                  {
+                    var totalCap = c.Sections.Sum(s => s.Capacity);
+                    var totalEnr = c.Sections.Sum(s => s.EnrolledCount);
+                    var isFull = c.Sections.All(s => s.IsFull);
+                    <MudChip T="string" Size="Size.Small" Color="@(isFull ? Color.Error : Color.Success)"
+                             Variant="Variant.Text">
+                      @totalEnr / @totalCap
+                    </MudChip>
+                  }
+                </td>
+                <td class="text-center">
+                  @if (isSelected)
+                  {
+                    <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Outlined"
+                               StartIcon="@Icons.Material.Filled.Remove" OnClick="@(() => RemoveCourse(c.CourseId))">
+                      Remove
+                    </MudButton>
+                  }
+                  else
+                  {
+                    <MudButton Size="Size.Small" Color="Color.Primary" Variant="Variant.Filled"
+                               StartIcon="@Icons.Material.Filled.Add" Disabled="@(!CanSelect(c))"
+                               OnClick="@(() => OpenSectionPicker(c))">
+                      Select
+                    </MudButton>
+                  }
+                </td>
+              </tr>
+            }
+          </tbody>
+        </MudSimpleTable>
+      }
+    </div>
+  </MudPaper>
+
+  @* ============================================================ *@
+  @* 2. SELECTED COURSES *@
+  @* ============================================================ *@
+  <MudPaper Elevation="2" Class="pa-4 mb-3" Style="border-radius:12px;">
+    <div class="d-flex align-center mb-3">
+      <MudIcon Icon="@Icons.Material.Filled.CheckCircle" Color="Color.Success" Class="mr-2" />
+      <MudText Typo="Typo.h6">Selected Courses (@_selectedSections.Count)</MudText>
+      <MudSpacer />
+      <MudText Typo="Typo.body2">
+        <strong>@_totalSelectedHours</strong> / 18 hours
+      </MudText>
+    </div>
+
+    @if (_selectedSections.Count == 0)
+    {
+      <MudText Color="Color.Secondary" Class="text-center pa-3">
+        No courses selected yet.
+      </MudText>
+    }
+    else
+    {
+      <MudSimpleTable Dense="true" Hover="true">
+        <thead>
+          <tr>
+            <th>Code</th>
+            <th>Course Name</th>
+            <th>Section</th>
+            <th class="text-center">CH</th>
+            <th>Instructor</th>
+            <th>Schedule</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          @foreach (var sel in _selectedSections.Values)
+          {
+            <tr>
+              <td style="font-weight:600;color:#594AE2;">@sel.CourseCode</td>
+              <td>@sel.CourseName</td>
+              <td>@sel.Section.SectionNumber</td>
+              <td class="text-center">@sel.CreditHours</td>
+              <td>@sel.Section.InstructorName</td>
+              <td style="font-size:11px;">
+                @foreach (var sch in sel.Section.Schedules)
+                {
+                  <div>@sch.DayOfWeek @sch.StartTime–@sch.EndTime</div>
+                }
+              </td>
+              <td>
+                <MudIconButton Icon="@Icons.Material.Filled.Close" Size="Size.Small" Color="Color.Error"
+                               OnClick="@(() => RemoveCourse(sel.CourseId))" />
+              </td>
+            </tr>
+          }
+        </tbody>
+      </MudSimpleTable>
+    }
+
+    <HoursSummary CurrentHours="_totalSelectedHours" MaxHours="18" />
+  </MudPaper>
+
+  @* ============================================================ *@
+  @* 3. VALIDATION ERRORS *@
+  @* ============================================================ *@
+  @if (_validation is not null && !_validation.IsValid && _validation.Errors.Count > 0)
+  {
+    <MudAlert Severity="Severity.Error" Class="mb-3" Icon="@Icons.Material.Filled.Error">
+      <MudText Typo="Typo.subtitle2" Style="font-weight:600;">
+        ⚠ Registration Issues (@_validation.Errors.Count)
+      </MudText>
+      <ul style="margin:6px 0 0 0;padding-left:20px;">
+        @foreach (var err in _validation.Errors)
+        {
+          <li>@err</li>
+        }
+      </ul>
+    </MudAlert>
+  }
+
+  @* ============================================================ *@
+  @* 4. FULL-WIDTH SCHEDULE PREVIEW *@
+  @* ============================================================ *@
+  <div class="mb-3">
+    <ScheduleGrid Items="_previewItems" />
+  </div>
+
+  @* ============================================================ *@
+  @* 5. ACTION BAR *@
+  @* ============================================================ *@
+  <MudPaper Elevation="4" Class="pa-3 d-flex align-center"
+            Style="border-radius:12px;position:sticky;bottom:12px;background:white;z-index:10;">
+    <MudText Typo="Typo.body1">
+      Total: <strong>@_totalSelectedHours</strong> / 18 hours
+    </MudText>
+    <MudSpacer />
+    <MudButton Variant="Variant.Outlined" Color="Color.Error" StartIcon="@Icons.Material.Filled.DeleteSweep"
+               Disabled="@(_saving)" OnClick="ConfirmDeleteCurrent">
+      Delete All Current
+    </MudButton>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="ml-2" StartIcon="@Icons.Material.Filled.CheckCircle"
+               Disabled="@(!CanConfirm())" OnClick="ConfirmRegistration">
+      @if (_saving)
+      {
+        <MudProgressCircular Size="Size.Small" Indeterminate="true" Color="Color.Inherit" />
+      }
+      else
+      {
+        <span>Confirm Registration</span>
+      }
+    </MudButton>
+  </MudPaper>
+}
+
+<style>
+  /* Fixed-height scroll box for the Available Courses table */
+  .courses-scroll {
+    max-height: 320px;
+    overflow-y: auto;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    background: #fff;
+  }
+
+  .courses-scroll table {
+    margin: 0;
+  }
+
+  .courses-scroll thead th {
+    position: sticky;
+    top: 0;
+    background: #f5f5f7;
+    z-index: 1;
+    font-size: 12px;
+    color: #555;
+  }
+
+  /* Custom scrollbar (WebKit) */
+  .courses-scroll::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  .courses-scroll::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 8px;
+  }
+
+  .courses-scroll::-webkit-scrollbar-thumb {
+    background: #c7c7d1;
+    border-radius: 8px;
+  }
+
+  .courses-scroll::-webkit-scrollbar-thumb:hover {
+    background: #a5a5b3;
+  }
+</style>
+
+@code {
+  private bool _loading = true;
+  private bool _saving;
+
+  private RegistrationEligibilityDto? _eligibility;
+  private List<AvailableCourseDto> _courses = new();
+  private readonly Dictionary<int, SelectedCourse> _selectedSections = new();
+  private RegistrationValidationResult? _validation;
+  private string _filter = string.Empty;
+  private string _currentSemesterName = "Current Semester";
+
+  public class SelectedCourse
+  {
+    public int CourseId { get; set; }
+    public string CourseCode { get; set; } = string.Empty;
+    public string CourseName { get; set; } = string.Empty;
+    public int CreditHours { get; set; }
+    public CourseSectionDto Section { get; set; } = null!;
+  }
+
+  private List<AvailableCourseDto> FilteredCourses =>
+      string.IsNullOrWhiteSpace(_filter)
+          ? _courses
+          : _courses.Where(c =>
+              c.Code.Contains(_filter, StringComparison.OrdinalIgnoreCase) ||
+              c.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+
+  private int _totalSelectedHours => _selectedSections.Values.Sum(c => c.CreditHours);
+
+  private List<PreviewItem> _previewItems =>
+      _selectedSections.Values.SelectMany(s => s.Section.Schedules.Select(sch => new PreviewItem
+      {
+        SectionId = s.Section.Id,
+        CourseCode = s.CourseCode,
+        CourseName = s.CourseName,
+        SectionNumber = s.Section.SectionNumber,
+        InstructorName = s.Section.InstructorName,
+        TeachingAssistantName = s.Section.TeachingAssistantName,
+        DayOfWeek = sch.DayOfWeek,
+        StartTime = sch.StartTime,
+        EndTime = sch.EndTime,
+        Room = sch.Room
+      })).ToList();
+
+  protected override async Task OnInitializedAsync() => await LoadAsync();
+
+  private async Task LoadAsync()
+  {
+    _loading = true;
+    try
+    {
+      _eligibility = await Reg.CheckEligibilityAsync();
+      if (_eligibility?.IsEligible != true) return;
+      _courses = await Reg.GetAvailableCoursesAsync() ?? new();
+    }
+    catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    finally { _loading = false; }
+  }
+
+  private bool CanSelect(AvailableCourseDto c)
+  {
+    if (c.Sections.Count == 0) return false;
+    if (c.Sections.All(s => s.IsFull)) return false;
+    if (c.IsAlreadyCompleted) return false;
+    if (!c.IsPrerequisitesMet) return false;
+    return true;
+  }
+
+  private async Task OpenSectionPicker(AvailableCourseDto course)
+  {
+    var parameters = new DialogParameters
+    {
+      [nameof(SectionPickerDialog.CourseCode)] = course.Code,
+      [nameof(SectionPickerDialog.CourseName)] = course.Name,
+      [nameof(SectionPickerDialog.CourseCreditHours)] = course.CreditHours,
+      [nameof(SectionPickerDialog.Sections)] = course.Sections
+    };
+
+    var options = new DialogOptions
+    {
+      MaxWidth = MaxWidth.Medium,
+      FullWidth = true,
+      CloseOnEscapeKey = true
+    };
+
+    var dialog = await DialogService.ShowAsync<SectionPickerDialog>(
+        $"Select Section for {course.Code}", parameters, options);
+
+    var result = await dialog.Result;
+    if (result is null || result.Canceled) return;
+
+    var sectionId = (int)result.Data!;
+    var section = course.Sections.First(s => s.Id == sectionId);
+
+    _selectedSections[course.CourseId] = new SelectedCourse
+    {
+      CourseId = course.CourseId,
+      CourseCode = course.Code,
+      CourseName = course.Name,
+      CreditHours = course.CreditHours,
+      Section = section
+    };
+
+    await ValidateAsync();
+  }
+
+  private async Task RemoveCourse(int courseId)
+  {
+    _selectedSections.Remove(courseId);
+    await ValidateAsync();
+  }
+
+  private async Task ValidateAsync()
+  {
+    if (_selectedSections.Count == 0)
+    {
+      _validation = null;
+      return;
+    }
+
+    try
+    {
+      var ids = _selectedSections.Values.Select(s => s.Section.Id).ToList();
+      _validation = await Reg.ValidateAsync(ids);
+    }
+    catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+  }
+
+  private bool CanConfirm() =>
+      !_saving && _selectedSections.Count > 0 && _validation?.IsValid == true;
+
+  private async Task ConfirmRegistration()
+  {
+    if (_selectedSections.Count == 0) return;
+
+    var parameters = new DialogParameters
+    {
+      [nameof(ConfirmDialog.Title)] = "Confirm Registration",
+      [nameof(ConfirmDialog.Message)] =
+            $"You are about to register {_selectedSections.Count} course(s) totaling {_totalSelectedHours} credit hours. Continue?",
+      [nameof(ConfirmDialog.YesText)] = "Confirm",
+      [nameof(ConfirmDialog.CancelText)] = "Cancel",
+      [nameof(ConfirmDialog.YesColor)] = Color.Primary
+    };
+
+    var dialog = await DialogService.ShowAsync<ConfirmDialog>("", parameters,
+        new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+    var result = await dialog.Result;
+    if (result is null || result.Canceled) return;
+
+    _saving = true;
+    try
+    {
+      var ids = _selectedSections.Values.Select(s => s.Section.Id).ToList();
+      var summary = await Reg.ConfirmAsync(ids);
+      Snackbar.Add(
+          $"✅ Registration completed! {summary?.EnrollmentsCount ?? 0} courses, {summary?.TotalCreditHours ?? 0} credit hours.",
+          Severity.Success);
+      _selectedSections.Clear();
+      _validation = null;
+      await LoadAsync();
+    }
+    catch (ApiException ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    finally { _saving = false; }
+  }
+
+  private async Task ConfirmDeleteCurrent()
+  {
+    var parameters = new DialogParameters
+    {
+      [nameof(ConfirmDialog.Title)] = "Delete Registration",
+      [nameof(ConfirmDialog.Message)] =
+            "Are you sure you want to remove ALL courses registered for the current semester? This cannot be undone.",
+      [nameof(ConfirmDialog.YesText)] = "Delete All",
+      [nameof(ConfirmDialog.CancelText)] = "Cancel",
+      [nameof(ConfirmDialog.YesColor)] = Color.Error
+    };
+
+    var dialog = await DialogService.ShowAsync<ConfirmDialog>("", parameters,
+        new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+    var result = await dialog.Result;
+    if (result is null || result.Canceled) return;
+
+    _saving = true;
+    try
+    {
+      await Reg.DeleteCurrentAsync();
+      Snackbar.Add("All registrations removed successfully.", Severity.Success);
+      _selectedSections.Clear();
+      _validation = null;
+      await LoadAsync();
+    }
+    catch (ApiException ex) { Snackbar.Add(ex.Message, Severity.Warning); }
+    catch (Exception ex) { Snackbar.Add(ex.Message, Severity.Error); }
+    finally { _saving = false; }
+  }
+}

@@ -1,0 +1,39 @@
+﻿@inject NavigationManager Nav
+
+<MudNavMenu Bordered="false">
+    <MudText Typo="Typo.overline" Class="px-4 pt-3 pb-1">Main</MudText>
+
+    <AuthorizeView Roles="Student">
+        <MudNavLink Href="/dashboard" Icon="@Icons.Material.Filled.Dashboard">
+            Dashboard
+        </MudNavLink>
+        <MudNavLink Href="/registration" Icon="@Icons.Material.Filled.AppRegistration">
+            Online Registration
+        </MudNavLink>
+        <MudNavLink Href="/schedule" Icon="@Icons.Material.Filled.CalendarMonth">
+            My Schedule
+        </MudNavLink>
+        <MudNavLink Href="/schedule/print" Icon="@Icons.Material.Filled.Print" Target="_blank">
+            Print Schedule
+        </MudNavLink>
+    </AuthorizeView>
+
+    <AuthorizeView Roles="Admin">
+        <MudText Typo="Typo.overline" Class="px-4 pt-3 pb-1">Administration</MudText>
+        <MudNavLink Href="/admin" Icon="@Icons.Material.Filled.AdminPanelSettings" Match="NavLinkMatch.All">
+            Admin Dashboard
+        </MudNavLink>
+        <MudNavLink Href="/admin/registration-periods" Icon="@Icons.Material.Filled.Schedule">
+            Registration Periods
+        </MudNavLink>
+        <MudNavLink Href="/admin/students" Icon="@Icons.Material.Filled.People">
+            Students
+        </MudNavLink>
+        <MudNavLink Href="/admin/courses" Icon="@Icons.Material.Filled.Book">
+            Courses
+        </MudNavLink>
+        <MudNavLink Href="/admin/sections" Icon="@Icons.Material.Filled.Class">
+            Sections
+        </MudNavLink>
+    </AuthorizeView>
+</MudNavMenu>

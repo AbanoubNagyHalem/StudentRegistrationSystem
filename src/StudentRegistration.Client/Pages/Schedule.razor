@@ -1,0 +1,116 @@
+@page "/schedule"
+@attribute [Authorize(Roles = "Student")]
+@inject ScheduleService ScheduleApi
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+
+<PageTitle>My Schedule</PageTitle>
+
+<MudText Typo="Typo.h4" Class="mb-4">My Schedule</MudText>
+
+@if (_loading)
+{
+  <div style="display:flex;justify-content:center;padding:4rem;">
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+  </div>
+}
+else if (_schedule is null)
+{
+  <MudAlert Severity="Severity.Error">Failed to load schedule.</MudAlert>
+}
+else if (_schedule.Items.Count == 0)
+{
+  <MudPaper Elevation="2" Class="pa-8 text-center" Style="border-radius:12px;">
+    <MudIcon Icon="@Icons.Material.Filled.EventBusy" Style="font-size:64px;color:#bbb;" />
+    <MudText Typo="Typo.h6" Class="mt-3">No courses registered</MudText>
+    <MudText Typo="Typo.body2" Color="Color.Secondary">
+      You have no registered courses for @_schedule.SemesterName.
+    </MudText>
+    <MudButton Variant="Variant.Filled" Color="Color.Primary" Class="mt-3"
+               OnClick="@(() => Nav.NavigateTo("/registration"))">
+      Go to Registration
+    </MudButton>
+  </MudPaper>
+}
+else
+{
+  <MudPaper Elevation="2" Class="pa-4 mb-4" Style="border-radius:12px;">
+    <MudGrid>
+      <MudItem xs="12" sm="6" md="3">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Student</MudText>
+        <MudText Typo="Typo.body1" Style="font-weight:600;">@_schedule.StudentName</MudText>
+      </MudItem>
+      <MudItem xs="12" sm="6" md="3">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Registration No.</MudText>
+        <MudText Typo="Typo.body1">@_schedule.RegistrationNumber</MudText>
+      </MudItem>
+      <MudItem xs="12" sm="6" md="3">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Department</MudText>
+        <MudText Typo="Typo.body1">@_schedule.DepartmentName</MudText>
+      </MudItem>
+      <MudItem xs="12" sm="6" md="3">
+        <MudText Typo="Typo.caption" Color="Color.Secondary">Semester</MudText>
+        <MudText Typo="Typo.body1">@_schedule.SemesterName</MudText>
+      </MudItem>
+    </MudGrid>
+
+    <MudDivider Class="my-3" />
+    <div class="d-flex align-center">
+      <MudIcon Icon="@Icons.Material.Filled.School" Color="Color.Primary" />
+      <MudText Typo="Typo.body1" Class="ml-2">
+        <strong>@_schedule.TotalCreditHours</strong> credit hours
+      </MudText>
+      <MudSpacer />
+      <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Print"
+                 OnClick="OpenPrint">
+        Print
+      </MudButton>
+    </div>
+  </MudPaper>
+
+  <ScheduleGrid Items="_previewItems" />
+}
+
+@code {
+  private ScheduleDto? _schedule;
+
+  private List<PreviewItem> _previewItems =>
+    _schedule?.Items.Select(i => new PreviewItem
+    {
+      SectionId = 0,
+      CourseCode = i.CourseCode,
+      CourseName = i.CourseName,
+      SectionNumber = i.SectionNumber,
+      InstructorName = i.InstructorName,
+      TeachingAssistantName = i.TeachingAssistantName,
+      DayOfWeek = i.DayOfWeek,
+      StartTime = i.StartTime,
+      EndTime = i.EndTime,
+      Room = i.Room
+    }).ToList() ?? new();
+  private bool _loading = true;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadAsync();
+  }
+
+  private async Task LoadAsync()
+  {
+    _loading = true;
+    try
+    {
+      _schedule = await ScheduleApi.GetCurrentScheduleAsync();
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add(ex.Message, Severity.Error);
+    }
+    finally
+    {
+      _loading = false;
+    }
+  }
+
+  private void OpenPrint() => Nav.NavigateTo("/schedule/print", forceLoad: true);
+}

@@ -1,0 +1,169 @@
+@startuml ERD_StudentRegistration
+!theme plain
+skinparam linetype ortho
+
+entity "Department" as dept {
+  * Id : int <<PK>>
+  --
+  Name : string
+  Code : string <<UK>>
+}
+
+entity "Student" as student {
+  * Id : int <<PK>>
+  --
+  RegistrationNumber : string <<UK>>
+  FullName : string
+  PinHash : string
+  Status : StudentStatus
+  TotalAchievement : decimal
+  GPA : decimal
+  Sponsor : string
+  --
+  DepartmentId : int <<FK>>
+  StudyPlanId : int <<FK>>
+}
+
+entity "StudyPlan" as plan {
+  * Id : int <<PK>>
+  --
+  Name : string
+  Year : int
+  --
+  DepartmentId : int <<FK>>
+}
+
+entity "StudyPlanCourse" as planCourse {
+  * StudyPlanId : int <<PK,FK>>
+  * CourseId : int <<PK,FK>>
+  --
+  SuggestedSemester : int
+  IsMandatory : bool
+}
+
+entity "Course" as course {
+  * Id : int <<PK>>
+  --
+  Code : string <<UK>>
+  Name : string
+  CreditHours : int
+  --
+  DepartmentId : int <<FK>>
+}
+
+entity "CoursePrerequisite" as prereq {
+  * CourseId : int <<PK,FK>>
+  * PrerequisiteCourseId : int <<PK,FK>>
+}
+
+entity "Semester" as semester {
+  * Id : int <<PK>>
+  --
+  Name : string
+  StartDate : datetime
+  EndDate : datetime
+  IsCurrent : bool
+}
+
+entity "RegistrationPeriod" as regPeriod {
+  * Id : int <<PK>>
+  --
+  StartDate : datetime
+  EndDate : datetime
+  IsOpen : bool
+  --
+  DepartmentId : int <<FK>>
+  SemesterId : int <<FK>>
+}
+
+entity "Instructor" as instructor {
+  * Id : int <<PK>>
+  --
+  Name : string
+  Email : string
+}
+
+entity "TeachingAssistant" as ta {
+  * Id : int <<PK>>
+  --
+  Name : string
+  Email : string
+}
+
+entity "CourseSection" as section {
+  * Id : int <<PK>>
+  --
+  SectionNumber : string
+  Capacity : int
+  EnrolledCount : int
+  --
+  CourseId : int <<FK>>
+  SemesterId : int <<FK>>
+  InstructorId : int <<FK>>
+  TAId : int <<FK>>
+}
+
+entity "SectionSchedule" as schedule {
+  * Id : int <<PK>>
+  --
+  DayOfWeek : int
+  StartTime : time
+  EndTime : time
+  Room : string
+  --
+  SectionId : int <<FK>>
+}
+
+entity "Enrollment" as enrollment {
+  * Id : int <<PK>>
+  --
+  Status : EnrollmentStatus
+  RegisteredAt : datetime
+  --
+  StudentId : int <<FK>>
+  SectionId : int <<FK>>
+}
+
+entity "StudentCompletedCourse" as completed {
+  * StudentId : int <<PK,FK>>
+  * CourseId : int <<PK,FK>>
+  --
+  Grade : string
+  CompletedAt : datetime
+}
+
+entity "AdminUser" as admin {
+  * Id : int <<PK>>
+  --
+  Username : string <<UK>>
+  PasswordHash : string
+  Role : string
+}
+
+dept ||--o{ student
+dept ||--o{ plan
+dept ||--o{ course
+dept ||--o{ regPeriod
+
+plan ||--o{ planCourse
+course ||--o{ planCourse
+
+course ||--o{ prereq
+course ||--o{ prereq
+
+course ||--o{ section
+semester ||--o{ section
+semester ||--o{ regPeriod
+
+instructor ||--o{ section
+ta ||--o{ section
+
+section ||--o{ schedule
+section ||--o{ enrollment
+
+student ||--o{ enrollment
+student ||--o{ completed
+course ||--o{ completed
+
+student }o--|| plan
+@enduml

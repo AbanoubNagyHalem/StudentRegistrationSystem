@@ -1,0 +1,129 @@
+@page "/admin/sections"
+@attribute [Authorize(Roles = "Admin")]
+@inject AdminService AdminApi
+@inject ISnackbar Snackbar
+
+<PageTitle>Sections</PageTitle>
+
+<div class="d-flex align-center mb-4">
+  <MudText Typo="Typo.h4">Sections</MudText>
+  <MudSpacer />
+  <MudSelect T="int?" @bind-Value="_semesterFilter" Label="Semester" Variant="Variant.Outlined" Margin="Margin.Dense"
+             Style="min-width:220px;" Clearable="true">
+    <MudSelectItem T="int?" Value="@((int?)null)">All</MudSelectItem>
+    @foreach (var s in _semesters)
+    {
+      <MudSelectItem T="int?" Value="@((int?)s.Id)">@s.Name</MudSelectItem>
+    }
+  </MudSelect>
+</div>
+
+@if (_loading)
+{
+  <div style="display:flex;justify-content:center;padding:4rem;">
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+  </div>
+}
+else
+{
+  <MudPaper Elevation="2" Class="pa-0" Style="border-radius:12px;overflow:hidden;">
+    <MudTable Items="_sections" Dense="true" Hover="true">
+      <HeaderContent>
+        <MudTh>Course</MudTh>
+        <MudTh>Section</MudTh>
+        <MudTh>Semester</MudTh>
+        <MudTh>Instructor</MudTh>
+        <MudTh>Schedule</MudTh>
+        <MudTh Class="text-right">Seats</MudTh>
+      </HeaderContent>
+      <RowTemplate>
+        <MudTd DataLabel="Course">
+          <strong>@context.CourseCode</strong>
+          <div style="font-size:11px;color:#888;">@context.CourseName</div>
+        </MudTd>
+        <MudTd DataLabel="Section">@context.SectionNumber</MudTd>
+        <MudTd DataLabel="Semester">@context.SemesterName</MudTd>
+        <MudTd DataLabel="Instructor">
+          @context.InstructorName
+          @if (!string.IsNullOrEmpty(context.TAName))
+          {
+            <div style="font-size:11px;color:#888;">TA: @context.TAName</div>
+          }
+        </MudTd>
+        <MudTd DataLabel="Schedule">
+          @foreach (var sch in context.Schedules)
+          {
+            <div style="font-size:12px;">
+              <strong>@sch.DayOfWeek</strong> @sch.StartTime–@sch.EndTime
+              @if (!string.IsNullOrEmpty(sch.Room))
+              {
+                <span style="color:#888;">(@sch.Room)</span>
+              }
+            </div>
+          }
+        </MudTd>
+        <MudTd DataLabel="Seats" Class="text-right">
+          @{
+            var isFull = context.EnrolledCount >= context.Capacity;
+            var isTight = context.Capacity - context.EnrolledCount <= 5;
+          }
+          <MudChip T="string" Size="Size.Small" Variant="Variant.Filled"
+                   Color="@(isFull ? Color.Error : (isTight ? Color.Warning : Color.Success))">
+            @context.EnrolledCount / @context.Capacity
+          </MudChip>
+        </MudTd>
+      </RowTemplate>
+    </MudTable>
+  </MudPaper>
+}
+
+@code {
+  private List<AdminSectionDto> _sections = new();
+  private List<AdminSemesterDto> _semesters = new();
+  private bool _loading = true;
+  private int? _semesterFilter;
+
+  protected override async Task OnInitializedAsync()
+  {
+    await LoadAllAsync();
+  }
+
+  private async Task LoadAllAsync()
+  {
+    _loading = true;
+    try
+    {
+      var semTask = AdminApi.GetSemestersAsync();
+      var secTask = AdminApi.GetSectionsAsync(_semesterFilter);
+
+      await Task.WhenAll(semTask, secTask);
+
+      _semesters = semTask.Result ?? new();
+      _sections = secTask.Result ?? new();
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add(ex.Message, Severity.Error);
+    }
+    finally
+    {
+      _loading = false;
+    }
+  }
+
+  protected override async Task OnParametersSetAsync()
+  {
+    // When filter changes, reload sections only
+    if (_semesters.Count > 0)
+    {
+      try
+      {
+        _sections = await AdminApi.GetSectionsAsync(_semesterFilter) ?? new();
+      }
+      catch (Exception ex)
+      {
+        Snackbar.Add(ex.Message, Severity.Error);
+      }
+    }
+  }
+}

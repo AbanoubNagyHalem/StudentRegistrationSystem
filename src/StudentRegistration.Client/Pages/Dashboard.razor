@@ -1,0 +1,220 @@
+@page "/dashboard"
+@attribute [Authorize]
+@inject AuthService Auth
+@inject StudentService StudentApi
+@inject NavigationManager Nav
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Dashboard — Student Registration</PageTitle>
+
+@if (_loading)
+{
+  <div style="display:flex;justify-content:center;padding:4rem;">
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" Size="Size.Large" />
+  </div>
+}
+else if (_dashboard is null)
+{
+  <MudAlert Severity="Severity.Error">
+    Could not load your dashboard. Please try again.
+    <MudButton Color="Color.Primary" OnClick="LoadAsync">Retry</MudButton>
+  </MudAlert>
+}
+else
+{
+  <div class="d-flex align-center mb-4">
+    <div>
+      <MudText Typo="Typo.h4" Style="font-weight:600;">Welcome back, @_dashboard.Profile.FullName 👋</MudText>
+      <MudText Typo="Typo.body1" Color="Color.Secondary">
+        @if (_dashboard.CurrentSemester is not null)
+        {
+          <span>@_dashboard.CurrentSemester.Name</span>
+        }
+      </MudText>
+    </div>
+    <MudSpacer />
+    <MudChip T="string" Color="@(_dashboard.CanRegister ? Color.Success : Color.Warning)" Variant="Variant.Filled"
+             Icon="@(_dashboard.CanRegister ? Icons.Material.Filled.CheckCircle : Icons.Material.Filled.Warning)">
+      @(_dashboard.CanRegister ? "Registration Open" : "Registration Closed")
+    </MudChip>
+  </div>
+
+  @if (!_dashboard.CanRegister && !string.IsNullOrEmpty(_dashboard.RegistrationBlockReason))
+  {
+    <MudAlert Severity="Severity.Warning" Variant="Variant.Outlined" Class="mb-4" Icon="@Icons.Material.Filled.Info">
+      @_dashboard.RegistrationBlockReason
+    </MudAlert>
+  }
+
+  <StudentInfoCard Profile="_dashboard.Profile" />
+
+  <MudText Typo="Typo.h5" Class="mt-6 mb-3">Available Actions</MudText>
+
+  <MudGrid Spacing="3">
+    <MudItem xs="12" sm="6" md="4">
+      <MudPaper Elevation="2" Class="pa-4 action-card" Style="border-radius:12px;height:100%;"
+                @onclick="GoToRegistration">
+        <div class="d-flex align-center gap-3 mb-2">
+          <MudAvatar Color="Color.Primary" Size="Size.Large">
+            <MudIcon Icon="@Icons.Material.Filled.AppRegistration" />
+          </MudAvatar>
+          <MudText Typo="Typo.h6">Online Registration</MudText>
+        </div>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+          Register courses for the current semester.
+        </MudText>
+        @if (!_dashboard.CanRegister)
+        {
+          <MudChip T="string" Size="Size.Small" Color="Color.Warning" Class="mt-2">
+            Currently Closed
+          </MudChip>
+        }
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="4">
+      <MudPaper Elevation="2" Class="pa-4 action-card" Style="border-radius:12px;height:100%;" @onclick="GoToSchedule">
+        <div class="d-flex align-center gap-3 mb-2">
+          <MudAvatar Color="Color.Secondary" Size="Size.Large">
+            <MudIcon Icon="@Icons.Material.Filled.CalendarMonth" />
+          </MudAvatar>
+          <MudText Typo="Typo.h6">My Schedule</MudText>
+        </div>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+          View your weekly timetable.
+        </MudText>
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="4">
+      <MudPaper Elevation="2" Class="pa-4 action-card" Style="border-radius:12px;height:100%;" @onclick="PrintSchedule">
+        <div class="d-flex align-center gap-3 mb-2">
+          <MudAvatar Color="Color.Info" Size="Size.Large">
+            <MudIcon Icon="@Icons.Material.Filled.Print" />
+          </MudAvatar>
+          <MudText Typo="Typo.h6">Print Schedule</MudText>
+        </div>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+          Open a print-friendly version.
+        </MudText>
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="4">
+      <MudPaper Elevation="2" Class="pa-4 action-card disabled" Style="border-radius:12px;height:100%;">
+        <div class="d-flex align-center gap-3 mb-2">
+          <MudAvatar Color="Color.Default" Size="Size.Large">
+            <MudIcon Icon="@Icons.Material.Filled.Description" />
+          </MudAvatar>
+          <MudText Typo="Typo.h6">Unofficial Transcript</MudText>
+        </div>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+          Not available in this version.
+        </MudText>
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="4">
+      <MudPaper Elevation="2" Class="pa-4 action-card disabled" Style="border-radius:12px;height:100%;">
+        <div class="d-flex align-center gap-3 mb-2">
+          <MudAvatar Color="Color.Default" Size="Size.Large">
+            <MudIcon Icon="@Icons.Material.Filled.Assignment" />
+          </MudAvatar>
+          <MudText Typo="Typo.h6">Academic Guidance</MudText>
+        </div>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+          Not available in this version.
+        </MudText>
+      </MudPaper>
+    </MudItem>
+
+    <MudItem xs="12" sm="6" md="4">
+      <MudPaper Elevation="2" Class="pa-4 action-card disabled" Style="border-radius:12px;height:100%;">
+        <div class="d-flex align-center gap-3 mb-2">
+          <MudAvatar Color="Color.Default" Size="Size.Large">
+            <MudIcon Icon="@Icons.Material.Filled.Badge" />
+          </MudAvatar>
+          <MudText Typo="Typo.h6">Guidance Card</MudText>
+        </div>
+        <MudText Typo="Typo.body2" Color="Color.Secondary">
+          Not available in this version.
+        </MudText>
+      </MudPaper>
+    </MudItem>
+  </MudGrid>
+}
+
+<style>
+  .action-card {
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .action-card:hover:not(.disabled) {
+    transform: translateY(-3px);
+    box-shadow: 0 6px 20px rgba(89, 74, 226, 0.18) !important;
+  }
+
+  .action-card.disabled {
+    cursor: not-allowed;
+    opacity: 0.55;
+  }
+</style>
+
+@code {
+  private StudentDashboardDto? _dashboard;
+  private bool _loading = true;
+
+  protected override async Task OnInitializedAsync()
+  {
+    var user = await Auth.GetUserInfoAsync();
+    if (user is null)
+    {
+      Nav.NavigateTo("/login", replace: true);
+      return;
+    }
+    if (user.Role == "Admin")
+    {
+      Nav.NavigateTo("/admin", replace: true);
+      return;
+    }
+
+    await LoadAsync();
+  }
+
+  private async Task LoadAsync()
+  {
+    _loading = true;
+    try
+    {
+      _dashboard = await StudentApi.GetMyDashboardAsync();
+    }
+    catch (ApiException ex) when (ex.StatusCode == 401)
+    {
+      await Auth.LogoutAsync();
+      Nav.NavigateTo("/login", replace: true);
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add(ex.Message, Severity.Error);
+      _dashboard = null;
+    }
+    finally
+    {
+      _loading = false;
+    }
+  }
+
+  private void GoToRegistration()
+  {
+    if (_dashboard?.CanRegister == true)
+      Nav.NavigateTo("/registration");
+    else
+      Snackbar.Add("Registration is currently unavailable for your account.",
+          Severity.Warning);
+  }
+
+  private void GoToSchedule() => Nav.NavigateTo("/schedule");
+  private void PrintSchedule() => Nav.NavigateTo("/schedule/print", forceLoad: true);
+}

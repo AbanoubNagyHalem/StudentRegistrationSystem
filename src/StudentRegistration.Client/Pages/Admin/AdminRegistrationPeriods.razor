@@ -1,0 +1,158 @@
+@page "/admin/registration-periods"
+@attribute [Authorize(Roles = "Admin")]
+@inject AdminService AdminApi
+@inject ISnackbar Snackbar
+@inject IDialogService DialogService
+
+<PageTitle>Registration Periods</PageTitle>
+
+<div class="d-flex align-center mb-4">
+  <MudText Typo="Typo.h4">Registration Periods</MudText>
+  <MudSpacer />
+  <MudButton Variant="Variant.Outlined" Color="Color.Primary" StartIcon="@Icons.Material.Filled.Refresh"
+             OnClick="LoadAsync">
+    Refresh
+  </MudButton>
+</div>
+
+@if (_loading)
+{
+  <div style="display:flex;justify-content:center;padding:4rem;">
+    <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+  </div>
+}
+else if (_periods.Count == 0)
+{
+  <MudAlert Severity="Severity.Info">No registration periods configured.</MudAlert>
+}
+else
+{
+  <MudPaper Elevation="2" Class="pa-0" Style="border-radius:12px;overflow:hidden;">
+    <MudTable Items="_periods" Dense="true" Hover="true">
+      <HeaderContent>
+        <MudTh>Department</MudTh>
+        <MudTh>Semester</MudTh>
+        <MudTh>Start</MudTh>
+        <MudTh>End</MudTh>
+        <MudTh>Status</MudTh>
+        <MudTh Class="text-right">Actions</MudTh>
+      </HeaderContent>
+      <RowTemplate>
+        <MudTd DataLabel="Department">@context.DepartmentName</MudTd>
+        <MudTd DataLabel="Semester">@context.SemesterName</MudTd>
+        <MudTd DataLabel="Start">@context.StartDate.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd DataLabel="End">@context.EndDate.ToString("yyyy-MM-dd")</MudTd>
+        <MudTd DataLabel="Status">
+          @if (context.IsCurrentlyActive)
+          {
+            <MudChip T="string" Color="Color.Success" Size="Size.Small" Variant="Variant.Filled">
+              Active
+            </MudChip>
+          }
+          else if (context.IsOpen)
+          {
+            <MudChip T="string" Color="Color.Warning" Size="Size.Small" Variant="Variant.Filled">
+              Open (Out of Window)
+            </MudChip>
+          }
+          else
+          {
+            <MudChip T="string" Color="Color.Error" Size="Size.Small" Variant="Variant.Filled">
+              Closed
+            </MudChip>
+          }
+        </MudTd>
+        <MudTd DataLabel="Actions" Class="text-right">
+          @if (context.IsOpen)
+          {
+            <MudButton Size="Size.Small" Color="Color.Error" Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Filled.Lock" OnClick="@(() => CloseAsync(context))">
+              Close
+            </MudButton>
+          }
+          else
+          {
+            <MudButton Size="Size.Small" Color="Color.Success" Variant="Variant.Filled"
+                       StartIcon="@Icons.Material.Filled.LockOpen" OnClick="@(() => OpenAsync(context))">
+              Open
+            </MudButton>
+          }
+        </MudTd>
+      </RowTemplate>
+    </MudTable>
+  </MudPaper>
+}
+
+@code {
+  private List<AdminRegistrationPeriodDto> _periods = new();
+  private bool _loading = true;
+
+  protected override async Task OnInitializedAsync() => await LoadAsync();
+
+  private async Task LoadAsync()
+  {
+    _loading = true;
+    try
+    {
+      _periods = await AdminApi.GetPeriodsAsync() ?? new();
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add(ex.Message, Severity.Error);
+    }
+    finally
+    {
+      _loading = false;
+    }
+  }
+
+  private async Task OpenAsync(AdminRegistrationPeriodDto p)
+  {
+    try
+    {
+      await AdminApi.OpenPeriodAsync(p.Id);
+      Snackbar.Add($"Opened registration for {p.DepartmentName}.", Severity.Success);
+      await LoadAsync();
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add(ex.Message, Severity.Error);
+    }
+  }
+
+  private async Task CloseAsync(AdminRegistrationPeriodDto p)
+  {
+    var confirmed = await ConfirmAsync(
+        "Close Registration",
+        $"Close registration for {p.DepartmentName}? Students will no longer be able to register.",
+        "Close", Color.Error);
+
+    if (!confirmed) return;
+
+    try
+    {
+      await AdminApi.ClosePeriodAsync(p.Id);
+      Snackbar.Add($"Closed registration for {p.DepartmentName}.", Severity.Success);
+      await LoadAsync();
+    }
+    catch (Exception ex)
+    {
+      Snackbar.Add(ex.Message, Severity.Error);
+    }
+  }
+
+  private async Task<bool> ConfirmAsync(string title, string msg, string yesText, Color yesColor)
+  {
+    var parameters = new DialogParameters
+    {
+      [nameof(ConfirmDialog.Title)] = title,
+      [nameof(ConfirmDialog.Message)] = msg,
+      [nameof(ConfirmDialog.YesText)] = yesText,
+      [nameof(ConfirmDialog.YesColor)] = yesColor
+    };
+    var dialog = await DialogService.ShowAsync<ConfirmDialog>("", parameters,
+        new DialogOptions { MaxWidth = MaxWidth.Small, FullWidth = true });
+    var result = await dialog.Result;
+    return result is not null && !result.Canceled;
+  }
+}

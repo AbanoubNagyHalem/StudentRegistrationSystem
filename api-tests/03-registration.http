@@ -1,0 +1,146 @@
+### ========================================
+### 0. Login as Ahmed (Active student)
+### ========================================
+# @name loginAhmed
+POST http://localhost:5039/api/auth/login
+Content-Type: application/json
+
+{
+    "registrationNumber": "20240001",
+    "pin": "1234"
+}
+
+
+### ========================================
+### 1. Check Eligibility
+### ========================================
+GET http://localhost:5039/api/registration/eligibility
+Authorization: Bearer {{loginAhmed.response.body.$.token}}
+
+
+### ========================================
+### 2. Get Available Courses
+### ========================================
+GET http://localhost:5039/api/registration/available-courses
+Authorization: Bearer {{loginAhmed.response.body.$.token}}
+
+
+### ========================================
+### 3. Get Sections for CS202 (Database Systems)
+### ========================================
+GET http://localhost:5039/api/registration/sections?courseId=4
+Authorization: Bearer {{loginAhmed.response.body.$.token}}
+
+
+### ========================================
+### 4. Validate - CS202 (Sec 1) — PASS
+### ========================================
+POST http://localhost:5039/api/registration/validate
+Authorization: Bearer {{loginAhmed.response.body.$.token}}
+Content-Type: application/json
+
+{
+    "sectionIds": [7]
+}
+
+
+### ========================================
+### 5. Validate - Full Section — FAIL
+### ========================================
+POST http://localhost:5039/api/registration/validate
+Authorization: Bearer {{loginAhmed.response.body.$.token}}
+Content-Type: application/json
+
+{
+    "sectionIds": [4]
+}
+
+
+### ========================================
+### 6. Validate - CONFLICT (CS102 + CS201)
+### ========================================
+POST http://localhost:5039/api/registration/validate
+Authorization: Bearer {{loginAhmed.response.body.$.token}}
+Content-Type: application/json
+
+{
+    "sectionIds": [3, 6]
+}
+
+
+### ========================================
+### 7. Confirm Registration - CS202 + MATH102
+### ========================================
+POST http://localhost:5039/api/registration/confirm
+Authorization: Bearer {{loginAhmed.response.body.$.token}}
+Content-Type: application/json
+
+{
+    "sectionIds": [7, 9]
+}
+
+
+### ========================================
+### 8. Get Current Schedule
+### ========================================
+GET http://localhost:5039/api/schedule/current
+Authorization: Bearer {{loginAhmed.response.body.$.token}}
+
+
+### ========================================
+### 9. Login as Sara
+### ========================================
+# @name loginSara
+POST http://localhost:5039/api/auth/login
+Content-Type: application/json
+
+{
+    "registrationNumber": "20240002",
+    "pin": "1234"
+}
+
+
+### ========================================
+### 10. Sara - Validate CS202 — FAIL (missing CS101)
+### ========================================
+POST http://localhost:5039/api/registration/validate
+Authorization: Bearer {{loginSara.response.body.$.token}}
+Content-Type: application/json
+
+{
+    "sectionIds": [7]
+}
+
+
+### ========================================
+### 11. Login as Graduated (Mohamed)
+### ========================================
+# @name loginGrad
+POST http://localhost:5039/api/auth/login
+Content-Type: application/json
+
+{
+    "registrationNumber": "20240003",
+    "pin": "1234"
+}
+
+
+### ========================================
+### 12. Graduated - Check Eligibility
+### ========================================
+GET http://localhost:5039/api/registration/eligibility
+Authorization: Bearer {{loginGrad.response.body.$.token}}
+
+
+### ========================================
+### 13. Delete Current Registration
+### ========================================
+DELETE http://localhost:5039/api/registration/current
+Authorization: Bearer {{loginAhmed.response.body.$.token}}
+
+
+### ========================================
+### 14. Verify Schedule is Empty
+### ========================================
+GET http://localhost:5039/api/schedule/current
+Authorization: Bearer {{loginAhmed.response.body.$.token}}

@@ -1,0 +1,78 @@
+@page "/admin/courses"
+@attribute [Authorize(Roles = "Admin")]
+@inject AdminService AdminApi
+@inject ISnackbar Snackbar
+
+<PageTitle>Courses</PageTitle>
+
+<div class="d-flex align-center mb-4">
+    <MudText Typo="Typo.h4">Courses</MudText>
+    <MudSpacer />
+    <MudTextField T="string" @bind-Value="_filter"
+                  Placeholder="Search..."
+                  Variant="Variant.Outlined" Margin="Margin.Dense"
+                  Immediate="true" Adornment="Adornment.Start"
+                  AdornmentIcon="@Icons.Material.Filled.Search"
+                  Style="max-width:320px;" />
+</div>
+
+@if (_loading)
+{
+    <div style="display:flex;justify-content:center;padding:4rem;">
+        <MudProgressCircular Indeterminate="true" Color="Color.Primary" />
+    </div>
+}
+else
+{
+    <MudPaper Elevation="2" Class="pa-0" Style="border-radius:12px;overflow:hidden;">
+        <MudTable Items="Filtered" Dense="true" Hover="true">
+            <HeaderContent>
+                <MudTh>Code</MudTh>
+                <MudTh>Name</MudTh>
+                <MudTh>Department</MudTh>
+<MudTh Class="text-right">Credit Hours</MudTh>
+            </HeaderContent>
+            <RowTemplate>
+                <MudTd DataLabel="Code">
+                    <span style="font-weight:600;">@context.Code</span>
+                </MudTd>
+                <MudTd DataLabel="Name">@context.Name</MudTd>
+                <MudTd DataLabel="Department">@context.DepartmentName</MudTd>
+                <MudTd DataLabel="Credit Hours" Class="text-right">
+                    <MudChip T="string" Size="Size.Small" Color="Color.Primary" Variant="Variant.Text">
+                        @context.CreditHours
+                    </MudChip>
+                </MudTd>
+            </RowTemplate>
+        </MudTable>
+    </MudPaper>
+}
+
+@code {
+    private List<AdminCourseDto> _courses = new();
+    private bool _loading = true;
+    private string _filter = string.Empty;
+
+    private List<AdminCourseDto> Filtered =>
+        string.IsNullOrWhiteSpace(_filter)
+            ? _courses
+            : _courses.Where(c =>
+                c.Code.Contains(_filter, StringComparison.OrdinalIgnoreCase) ||
+                c.Name.Contains(_filter, StringComparison.OrdinalIgnoreCase)).ToList();
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            _courses = await AdminApi.GetCoursesAsync() ?? new();
+        }
+        catch (Exception ex)
+        {
+            Snackbar.Add(ex.Message, Severity.Error);
+        }
+        finally
+        {
+            _loading = false;
+        }
+    }
+}

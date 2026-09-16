@@ -1,0 +1,147 @@
+@startuml ClassDiagram_StudentRegistration
+!theme plain
+skinparam classAttributeIconSize 0
+
+class Student {
+  +int Id
+  +string RegistrationNumber
+  +string FullName
+  +string PinHash
+  +StudentStatus Status
+  +decimal TotalAchievement
+  +decimal GPA
+  +string Sponsor
+  +int DepartmentId
+  +int StudyPlanId
+  --
+  +bool IsEligibleForRegistration()
+}
+
+class Department {
+  +int Id
+  +string Name
+  +string Code
+}
+
+class StudyPlan {
+  +int Id
+  +string Name
+  +int Year
+  +int DepartmentId
+}
+
+class StudyPlanCourse {
+  +int StudyPlanId
+  +int CourseId
+  +int SuggestedSemester
+  +bool IsMandatory
+}
+
+class Course {
+  +int Id
+  +string Code
+  +string Name
+  +int CreditHours
+  +int DepartmentId
+}
+
+class CoursePrerequisite {
+  +int CourseId
+  +int PrerequisiteCourseId
+}
+
+class Semester {
+  +int Id
+  +string Name
+  +DateTime StartDate
+  +DateTime EndDate
+  +bool IsCurrent
+}
+
+class RegistrationPeriod {
+  +int Id
+  +int DepartmentId
+  +int SemesterId
+  +DateTime StartDate
+  +DateTime EndDate
+  +bool IsOpen
+  --
+  +bool IsActive()
+}
+
+class Instructor {
+  +int Id
+  +string Name
+  +string Email
+}
+
+class TeachingAssistant {
+  +int Id
+  +string Name
+  +string Email
+}
+
+class CourseSection {
+  +int Id
+  +int CourseId
+  +int SemesterId
+  +string SectionNumber
+  +int Capacity
+  +int EnrolledCount
+  +int InstructorId
+  +int TAId
+  --
+  +bool HasAvailableSeats()
+}
+
+class SectionSchedule {
+  +int Id
+  +int SectionId
+  +DayOfWeek DayOfWeek
+  +TimeOnly StartTime
+  +TimeOnly EndTime
+  +string Room
+}
+
+class Enrollment {
+  +int Id
+  +int StudentId
+  +int SectionId
+  +EnrollmentStatus Status
+  +DateTime RegisteredAt
+}
+
+class StudentCompletedCourse {
+  +int StudentId
+  +int CourseId
+  +string Grade
+  +DateTime CompletedAt
+}
+
+class AdminUser {
+  +int Id
+  +string Username
+  +string PasswordHash
+  +string Role
+}
+
+Student "1" --> "*" Enrollment
+Student "1" --> "*" StudentCompletedCourse
+Student "*" --> "1" Department
+Student "*" --> "0..1" StudyPlan
+Department "1" --> "*" Student
+Department "1" --> "*" StudyPlan
+Department "1" --> "*" Course
+Department "1" --> "*" RegistrationPeriod
+StudyPlan "1" --> "*" StudyPlanCourse
+Course "1" --> "*" StudyPlanCourse
+Course "1" --> "*" CoursePrerequisite
+Course "1" --> "*" CourseSection
+Semester "1" --> "*" CourseSection
+Instructor "1" --> "*" CourseSection
+TeachingAssistant "1" --> "*" CourseSection
+CourseSection "1" --> "*" SectionSchedule
+CourseSection "1" --> "*" Enrollment
+Course "1" --> "*" StudentCompletedCourse
+
+@enduml

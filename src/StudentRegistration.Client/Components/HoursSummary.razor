@@ -1,0 +1,31 @@
+@using StudentRegistration.Client.Models
+
+<MudPaper Elevation="1" Class="pa-3 mb-4" Style="border-radius:12px;">
+  <div class="d-flex align-center">
+    <MudIcon Icon="@Icons.Material.Filled.AccessTime" Color="Color.Primary" Class="mr-2" />
+    <MudText Typo="Typo.body1" Style="font-weight:600;">
+      Credit Hours
+    </MudText>
+    <MudSpacer />
+    <MudText Typo="Typo.h6" Color="@GetColor()">
+      @CurrentHours / @MaxHours
+    </MudText>
+  </div>
+  <MudProgressLinear Color="@GetColor()" Size="Size.Medium" Class="mt-2" Value="@GetPercent()" Rounded="true" />
+</MudPaper>
+
+@code {
+  [Parameter] public int CurrentHours { get; set; }
+  [Parameter] public int MaxHours { get; set; } = 18;
+
+  private double GetPercent() =>
+      MaxHours == 0 ? 0 : Math.Min(100, (double)CurrentHours / MaxHours * 100);
+
+  private Color GetColor()
+  {
+    var ratio = MaxHours == 0 ? 0 : (double)CurrentHours / MaxHours;
+    if (ratio >= 1) return Color.Success;
+    if (ratio >= 0.7) return Color.Warning;
+    return Color.Primary;
+  }
+}
