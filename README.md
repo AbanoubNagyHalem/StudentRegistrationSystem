@@ -18,7 +18,7 @@ A modern academic course registration portal for **Master's students**, built wi
 - [Technologies](#-technologies)
 - [Prerequisites](#-prerequisites)
 - [Installation](#-installation)
-- [Database Setup](#-database-setup)
+- [Database Setup](#️-database-setup)
 - [Running the Application](#-running-the-application)
 - [Demo Accounts](#-demo-accounts)
 - [Business Rules](#-business-rules)
@@ -26,7 +26,6 @@ A modern academic course registration portal for **Master's students**, built wi
 - [Testing](#-testing)
 - [Project Structure](#-project-structure)
 - [Troubleshooting](#-troubleshooting)
-- [FAQ](#-faq)
 
 ---
 
@@ -53,18 +52,18 @@ An **Admin Dashboard** is included to manage colleges, departments, courses, sec
 
 ### 🎓 Student Features
 
-| Feature                 | Description                                               |
-| ----------------------- | --------------------------------------------------------- |
-| **Login**               | Registration number + PIN authentication with JWT         |
-| **Dashboard**           | Student profile, current semester, quick actions          |
-| **Online Registration** | Browse courses from your study plan                       |
-| **Section Selection**   | Choose specific sections with real-time seat availability |
-| **Prerequisites Check** | Automatic validation of prerequisite courses              |
-| **18-Hour Limit**       | Cannot exceed 18 credit hours per semester                |
-| **Conflict Detection**  | Automatic schedule conflict detection                     |
-| **Capacity Check**      | Atomic seat reservation to prevent over-enrollment        |
-| **Print Schedule**      | Clean print-friendly weekly schedule                      |
-| **Delete Registration** | Remove all current semester registrations                 |
+| Feature                 | Description                                                        |
+| ----------------------- | ------------------------------------------------------------------ |
+| **Login**               | Registration number + PIN authentication with JWT                  |
+| **Dashboard**           | Student profile, current semester, quick actions                   |
+| **Online Registration** | Browse courses from your study plan                                |
+| **Section Selection**   | Choose specific sections with real-time seat availability          |
+| **Prerequisites Check** | Automatic validation of prerequisite courses                       |
+| **18-Hour Limit**       | Cannot exceed 18 credit hours per semester (cumulative validation) |
+| **Conflict Detection**  | Automatic schedule conflict detection                              |
+| **Capacity Check**      | Atomic seat reservation to prevent over-enrollment                 |
+| **Print Schedule**      | Clean print-friendly weekly schedule                               |
+| **Delete Registration** | Remove all current semester registrations                          |
 
 ### 🔧 Admin Features
 
@@ -94,14 +93,14 @@ The solution follows **Clean Architecture** with clear separation of concerns:
 ```
 StudentRegistrationSystem.sln
 ├── src/
-│   ├── StudentRegistration.Domain/          → Entities, Enums (no dependencies)
+│   ├── StudentRegistration.Domain/          → Entities, Enums
 │   ├── StudentRegistration.Application/     → DTOs, Services, Interfaces
 │   ├── StudentRegistration.Infrastructure/  → EF Core, Migrations, Seed
-│   ├── StudentRegistration.Api/             → REST API (ASP.NET Core)
+│   ├── StudentRegistration.Api/             → REST API
 │   └── StudentRegistration.Client/          → Blazor WASM UI
 └── tests/
-    ├── StudentRegistration.UnitTests/       → 23 unit tests
-    └── StudentRegistration.IntegrationTests/ → 5 integration tests
+    ├── StudentRegistration.UnitTests/
+    └── StudentRegistration.IntegrationTests/
 ```
 
 ### Data Flow
@@ -220,8 +219,6 @@ The connection string is configured in:
 
 ### Option A: Using LocalDB (Easiest)
 
-If you have **Visual Studio** installed, LocalDB is already available. Use this connection string:
-
 ```json
 {
   "ConnectionStrings": {
@@ -231,8 +228,6 @@ If you have **Visual Studio** installed, LocalDB is already available. Use this 
 ```
 
 ### Option B: Using SQL Server Express (SQLEXPRESS)
-
-If you have **SQL Server Express** installed:
 
 ```json
 {
@@ -357,7 +352,7 @@ All rules are **enforced on the backend** — frontend validation is for UX only
 | **BR-02** | Student status must be **Active** (not Graduated / Suspended / Dismissed)                                            |
 | **BR-03** | Courses must belong to the student's study plan                                                                      |
 | **BR-04** | All prerequisites must be completed                                                                                  |
-| **BR-05** | Total credit hours ≤ **18** per semester                                                                             |
+| **BR-05** | **Total credit hours (already registered + new selection) ≤ 18** per semester                                        |
 | **BR-06** | Section capacity: `enrolled < capacity` (atomic check under serializable transaction)                                |
 | **BR-07** | No duplicate enrollment in the same section                                                                          |
 | **BR-08** | No schedule conflicts (same day + overlapping times)                                                                 |
@@ -451,44 +446,15 @@ StudentRegistrationSystem/
 │   └── 04-admin.http
 │
 ├── docs/                            # Documentation
-│   ├── 01-ERD.md
-│   ├── 02-ClassDiagram.md
+│   ├── PROJECT_DOCUMENTATION.md
 │   └── screenshots/
 │
 ├── src/
 │   ├── StudentRegistration.Domain/
-│   │   ├── Common/BaseEntity.cs
-│   │   ├── Entities/                # 17 entities
-│   │   └── Enums/                   # 4 enums
-│   │
 │   ├── StudentRegistration.Application/
-│   │   ├── Common/Exceptions/
-│   │   ├── DTOs/
-│   │   ├── Interfaces/
-│   │   └── Services/                # 5 services
-│   │
 │   ├── StudentRegistration.Infrastructure/
-│   │   ├── Data/
-│   │   │   ├── Configurations/      # 16 EF configs
-│   │   │   ├── Seed/                # Catalog + Seeder
-│   │   │   └── AppDbContext.cs
-│   │   └── Migrations/
-│   │
 │   ├── StudentRegistration.Api/
-│   │   ├── Controllers/             # 6 controllers
-│   │   ├── Middleware/
-│   │   ├── Services/
-│   │   ├── Settings/
-│   │   └── Program.cs
-│   │
 │   └── StudentRegistration.Client/
-│       ├── Auth/
-│       ├── Components/              # 8 components
-│       ├── Layout/
-│       ├── Models/
-│       ├── Pages/                   # 12 pages
-│       ├── Services/                # 6 services
-│       └── wwwroot/
 │
 └── tests/
     ├── StudentRegistration.UnitTests/
@@ -522,8 +488,6 @@ StudentRegistrationSystem/
 dotnet ef database update --project src/StudentRegistration.Infrastructure --startup-project src/StudentRegistration.Api
 ```
 
-Or simply run the API — it auto-migrates.
-
 ### ❌ `Login failed for user 'DOMAIN\username'`
 
 **Cause:** Windows Authentication not enabled.
@@ -540,14 +504,7 @@ Or simply run the API — it auto-migrates.
 **Solution:**
 
 1. Check the client port from `dotnet run` output.
-2. Update `src/StudentRegistration.Api/Program.cs` CORS section:
-
-```csharp
-policy.WithOrigins(
-    "http://localhost:5174",  // ← your client port
-    ...
-)
-```
+2. Update `src/StudentRegistration.Api/Program.cs` CORS section.
 
 ### ❌ `Self-signed certificate` warning
 
@@ -572,61 +529,33 @@ dotnet ef database drop --project src/StudentRegistration.Infrastructure --start
 dotnet run --project src/StudentRegistration.Api
 ```
 
-### ❌ `Address already in use` on port 5039 or 5174
+### ❌ `SRI integrity checks failed` in browser console
+
+**Cause:** Blazor WASM asset fingerprinting + compression mismatch.
 
 **Solution:**
 
-```bash
-# Windows
-netstat -ano | findstr :5039
-taskkill /PID <pid> /F
+In `src/StudentRegistration.Client/StudentRegistration.Client.csproj`:
 
-# Or change the port in launchSettings.json
+```xml
+<PropertyGroup>
+    <WasmFingerprintAssets>false</WasmFingerprintAssets>
+    <BlazorEnableCompression>false</BlazorEnableCompression>
+</PropertyGroup>
 ```
 
----
-
-## ❓ FAQ
-
-### Q: Do I need Visual Studio?
-
-**A:** No. The project works perfectly with **VS Code + .NET CLI**.
-
-### Q: Which SQL Server should I use?
-
-**A:** **LocalDB** is easiest if you have Visual Studio. Otherwise, install **SQL Server Express**.
-
-### Q: Can I use PostgreSQL or MySQL?
-
-**A:** Not out of the box. You'd need to change the EF Core provider and migrations.
-
-### Q: How do I reset the database?
+Then:
 
 ```bash
-dotnet ef database drop --project src/StudentRegistration.Infrastructure --startup-project src/StudentRegistration.Api --force
-dotnet run --project src/StudentRegistration.Api
+for /d /r . %d in (bin,obj) do @if exist "%d" rd /s/q "%d"
+dotnet build StudentRegistrationSystem.sln
 ```
 
-### Q: How do I add a new course?
+### ❌ Print button throws `Maximum call stack size exceeded`
 
-Use the Admin Dashboard, or add it to `CourseCatalog.cs` and re-seed.
+**Cause:** Overridden `window.print` in `index.html`.
 
-### Q: Why 18 credit hours?
-
-It's an explicit requirement from the assignment. To change it, edit `MaxCreditHours` in `RegistrationService.cs`.
-
-### Q: Why is my student not showing any available courses?
-
-Possible reasons:
-
-1. Registration period is closed for their department.
-2. Student status is not Active.
-3. Student has no study plan assigned.
-4. All courses are already completed.
-
-### Q: Where are the JWT secrets stored?
-
-In `appsettings.json` for **development only**. For production, use User Secrets or Environment Variables.
+**Solution:** Remove any custom `window.print` script from `wwwroot/index.html`. The native browser function should be used directly.
 
 ---
 
@@ -657,8 +586,8 @@ Academic project — educational use only.
 ## ✅ Assignment Checklist
 
 - ✅ Story Board (Screens) — see `docs/`
-- ✅ ERD — see `docs/01-ERD.md`
-- ✅ Class Diagram — see `docs/02-ClassDiagram.md`
+- ✅ ERD — see `docs/PROJECT_DOCUMENTATION.md`
+- ✅ Class Diagram — see `docs/PROJECT_DOCUMENTATION.md`
 - ✅ .NET Core + Blazor WASM
 - ✅ EF Core Code First + SQL Server
 - ✅ Entity Framework + LINQ
@@ -666,11 +595,11 @@ Academic project — educational use only.
 - ✅ Menu / Dashboard
 - ✅ Online Registration
 - ✅ Prerequisites validation
-- ✅ 18-hour limit
+- ✅ 18-hour limit (with cumulative validation)
 - ✅ Capacity check
 - ✅ Instructor + TA display
 - ✅ Schedule conflict detection
-- ✅ Conflict visualization (red cells + X)
+- ✅ Conflict visualization (red cells + warning)
 - ✅ Confirm registration
 - ✅ Delete registration
 - ✅ Print schedule

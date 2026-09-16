@@ -266,13 +266,25 @@ public class RegistrationService : IRegistrationService
       if (existingEnrollments.Contains(s.Id))
         result.Errors.Add($"You are already registered in section {s.SectionNumber} of '{s.Course.Code}'.");
 
-    // Credit limit
+    // 9. Credit limit — include already-registered hours
     var newCredits = sections.Sum(s => s.Course.CreditHours);
-    result.TotalCreditHours = newCredits;
 
-    if (newCredits > MaxCreditHours)
+    // Hours already registered this semester (excluding any sections currently selected)
+    var alreadyRegisteredCredits = await _db.Enrollments.AsNoTracking()
+        .Where(e => e.StudentId == studentId
+                 && e.Section.SemesterId == semester.Id
+                 && e.Status == EnrollmentStatus.Registered
+                 && !sectionIds.Contains(e.SectionId))
+        .SumAsync(e => e.Section.Course.CreditHours);
+
+    var totalCredits = alreadyRegisteredCredits + newCredits;
+    result.TotalCreditHours = totalCredits;
+
+    if (totalCredits > MaxCreditHours)
       result.Errors.Add(
-          $"Total credit hours ({newCredits}) exceeds the maximum allowed ({MaxCreditHours}).");
+          $"Total credit hours ({totalCredits}) exceeds the maximum allowed ({MaxCreditHours}). " +
+          $"Already registered: {alreadyRegisteredCredits} CH, new selection: {newCredits} CH.");
+
 
     // Schedule conflicts
     var conflicts = DetectConflicts(sections);
@@ -382,7 +394,7 @@ public class RegistrationService : IRegistrationService
       return new RegistrationSummaryDto
       {
         EnrollmentsCount = enrollments.Count,
-        TotalCreditHours = sections.Sum(s => s.Course.CreditHours),
+        TotalCreditHours = validation.TotalCreditHours,  // ← الإجمالي الكلي
         RegisteredAt = now,
         Courses = enrollments.Select((e, idx) => new EnrolledCourseDto
         {

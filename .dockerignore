@@ -1,0 +1,22 @@
+**/bin/
+**/obj/
+**/.vs/
+**/.vscode/
+**/*.user
+**/*.suo
+**/.git/
+**/.gitignore
+**/node_modules/
+
+# Don't copy existing builds
+**/Dockerfile
+**/.dockerignore
+
+# Keep README and docs out of build context (smaller images)
+README.md
+docs/
+api-tests/
+tests/
+
+# Local config
+**/appsettings.Development.json
