@@ -1,12 +1,23 @@
 @startuml ERD_StudentRegistration
 !theme plain
 skinparam linetype ortho
+skinparam nodesep 60
+skinparam ranksep 60
+
+entity "College" as college {
+  * Id : int <<PK>>
+  --
+  Name : string
+  Code : string <<UK>>
+}
 
 entity "Department" as dept {
   * Id : int <<PK>>
   --
   Name : string
   Code : string <<UK>>
+  --
+  CollegeId : int <<FK>>
 }
 
 entity "Student" as student {
@@ -16,6 +27,7 @@ entity "Student" as student {
   FullName : string
   PinHash : string
   Status : StudentStatus
+  Level : StudentLevel
   TotalAchievement : decimal
   GPA : decimal
   Sponsor : string
@@ -29,6 +41,7 @@ entity "StudyPlan" as plan {
   --
   Name : string
   Year : int
+  Level : StudentLevel
   --
   DepartmentId : int <<FK>>
 }
@@ -37,7 +50,7 @@ entity "StudyPlanCourse" as planCourse {
   * StudyPlanId : int <<PK,FK>>
   * CourseId : int <<PK,FK>>
   --
-  SuggestedSemester : int
+  SuggestedTerm : int
   IsMandatory : bool
 }
 
@@ -140,6 +153,7 @@ entity "AdminUser" as admin {
   Role : string
 }
 
+college ||--o{ dept
 dept ||--o{ student
 dept ||--o{ plan
 dept ||--o{ course
@@ -166,4 +180,5 @@ student ||--o{ completed
 course ||--o{ completed
 
 student }o--|| plan
+
 @enduml

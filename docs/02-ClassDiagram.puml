@@ -1,0 +1,220 @@
+@startuml ClassDiagram_StudentRegistration
+!theme plain
+skinparam classAttributeIconSize 0
+skinparam nodesep 50
+skinparam ranksep 60
+
+abstract class BaseEntity {
+  +int Id
+}
+
+class College {
+  +string Name
+  +string Code
+  --
+  +ICollection~Department~ Departments
+}
+
+class Department {
+  +string Name
+  +string Code
+  +int CollegeId
+  --
+  +College College
+  +ICollection~Student~ Students
+  +ICollection~StudyPlan~ StudyPlans
+  +ICollection~Course~ Courses
+  +ICollection~RegistrationPeriod~ RegistrationPeriods
+}
+
+class Student {
+  +string RegistrationNumber
+  +string FullName
+  +string PinHash
+  +StudentStatus Status
+  +StudentLevel Level
+  +decimal? TotalAchievement
+  +decimal? GPA
+  +string? Sponsor
+  +int DepartmentId
+  +int? StudyPlanId
+  --
+  +Department Department
+  +StudyPlan? StudyPlan
+  +ICollection~Enrollment~ Enrollments
+  +ICollection~StudentCompletedCourse~ CompletedCourses
+}
+
+class StudyPlan {
+  +string Name
+  +int Year
+  +StudentLevel Level
+  +int DepartmentId
+  --
+  +Department Department
+  +ICollection~StudyPlanCourse~ Courses
+  +ICollection~Student~ Students
+}
+
+class StudyPlanCourse {
+  +int StudyPlanId
+  +int CourseId
+  +int SuggestedTerm
+  +bool IsMandatory
+  --
+  +StudyPlan StudyPlan
+  +Course Course
+}
+
+class Course {
+  +string Code
+  +string Name
+  +int CreditHours
+  +int DepartmentId
+  --
+  +Department Department
+  +ICollection~CoursePrerequisite~ Prerequisites
+  +ICollection~CourseSection~ Sections
+  +ICollection~StudyPlanCourse~ StudyPlanCourses
+}
+
+class CoursePrerequisite {
+  +int CourseId
+  +int PrerequisiteCourseId
+  --
+  +Course Course
+  +Course PrerequisiteCourse
+}
+
+class Semester {
+  +string Name
+  +DateTime StartDate
+  +DateTime EndDate
+  +bool IsCurrent
+  --
+  +ICollection~CourseSection~ Sections
+  +ICollection~RegistrationPeriod~ RegistrationPeriods
+}
+
+class RegistrationPeriod {
+  +DateTime StartDate
+  +DateTime EndDate
+  +bool IsOpen
+  +int DepartmentId
+  +int SemesterId
+  --
+  +Department Department
+  +Semester Semester
+  +bool IsActive(DateTime now)
+}
+
+class Instructor {
+  +string Name
+  +string? Email
+  --
+  +ICollection~CourseSection~ Sections
+}
+
+class TeachingAssistant {
+  +string Name
+  +string? Email
+  --
+  +ICollection~CourseSection~ Sections
+}
+
+class CourseSection {
+  +string SectionNumber
+  +int Capacity
+  +int EnrolledCount
+  +int CourseId
+  +int SemesterId
+  +int InstructorId
+  +int? TAId
+  --
+  +Course Course
+  +Semester Semester
+  +Instructor Instructor
+  +TeachingAssistant? TeachingAssistant
+  +ICollection~SectionSchedule~ Schedules
+  +ICollection~Enrollment~ Enrollments
+  +bool HasAvailableSeats()
+}
+
+class SectionSchedule {
+  +WeekDay DayOfWeek
+  +TimeOnly StartTime
+  +TimeOnly EndTime
+  +string? Room
+  +int SectionId
+  --
+  +CourseSection Section
+}
+
+class Enrollment {
+  +EnrollmentStatus Status
+  +DateTime RegisteredAt
+  +int StudentId
+  +int SectionId
+  --
+  +Student Student
+  +CourseSection Section
+}
+
+class StudentCompletedCourse {
+  +int StudentId
+  +int CourseId
+  +string Grade
+  +DateTime CompletedAt
+  --
+  +Student Student
+  +Course Course
+}
+
+class AdminUser {
+  +string Username
+  +string PasswordHash
+  +string Role
+}
+
+BaseEntity <|-- College
+BaseEntity <|-- Department
+BaseEntity <|-- Student
+BaseEntity <|-- StudyPlan
+BaseEntity <|-- Course
+BaseEntity <|-- Semester
+BaseEntity <|-- RegistrationPeriod
+BaseEntity <|-- Instructor
+BaseEntity <|-- TeachingAssistant
+BaseEntity <|-- CourseSection
+BaseEntity <|-- SectionSchedule
+BaseEntity <|-- Enrollment
+BaseEntity <|-- AdminUser
+
+College "1" --> "*" Department
+Department "1" --> "*" Student
+Department "1" --> "*" StudyPlan
+Department "1" --> "*" Course
+Department "1" --> "*" RegistrationPeriod
+
+StudyPlan "1" --> "*" StudyPlanCourse
+Course "1" --> "*" StudyPlanCourse
+
+Course "1" --> "*" CoursePrerequisite
+Course "1" --> "*" CourseSection
+
+Semester "1" --> "*" CourseSection
+Semester "1" --> "*" RegistrationPeriod
+
+Instructor "1" --> "*" CourseSection
+TeachingAssistant "1" --> "*" CourseSection
+
+CourseSection "1" --> "*" SectionSchedule
+CourseSection "1" --> "*" Enrollment
+
+Student "1" --> "*" Enrollment
+Student "1" --> "*" StudentCompletedCourse
+Course "1" --> "*" StudentCompletedCourse
+
+Student "*" --> "0..1" StudyPlan
+
+@enduml
